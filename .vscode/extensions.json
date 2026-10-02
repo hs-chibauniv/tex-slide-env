@@ -1,0 +1,8 @@
+{
+  "recommendations": [
+    "James-Yu.latex-workshop",  // LaTeXのコンパイル・プレビュー用
+    "ms-python.python",          // Pythonの実行・デバッグ用
+    "ms-python.vscode-pylance", // Pythonのコード補完用
+    "ms-toolsai.jupyter"        // Jupyter Notebook (.ipynb) 用
+  ]
+}

@@ -1,0 +1,43 @@
+{
+  "name": "LuaLaTeX + Python/Jupyter Environment",
+  "dockerComposeFile": "compose.yaml",
+  "service": "tex-dev",
+  "workspaceFolder": "/workspace",
+
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "James-Yu.latex-workshop",
+        "ms-python.python",
+        "ms-python.vscode-pylance",
+        "ms-toolsai.jupyter"
+      ],
+      "settings": {
+        "latex-workshop.latex.autoBuild.run": "onSave",
+        "latex-workshop.latex.recipe.default": "LuaLaTeX",
+        "latex-workshop.latex.recipes": [{"name": "LuaLaTeX", "tools": ["lualatex-tool"]}],
+        
+        // 👇 1. 出力先を「out」フォルダに指定する設定を追加
+        "latex-workshop.latex.outDir": "%DIR%/out",
+
+        "latex-workshop.latex.tools": [
+          {
+            "name": "lualatex-tool",
+            "command": "lualatex",
+            "args": [
+              "-synctex=1",
+              "-interaction=nonstopmode",
+              "-file-line-error",
+              // 👇 2. 出力先を lualatex コマンドにも伝える指示を追加
+              "-output-directory=%OUTDIR%", 
+              "%DOC%"
+            ]
+          }
+        ],
+        "latex-workshop.view.pdf.viewer": "tab",
+        "python.defaultInterpreterPath": "/usr/bin/python3"
+      }
+    }
+  },
+  "remoteUser": "root"
+}

@@ -1,0 +1,173 @@
+% Template for a single-paper introduction.
+% Compile from slide/:
+%   lualatex -interaction=nonstopmode -output-directory=out template_en.tex
+% Colors, title page, and the takeaway bar live in labslide.sty.
+% Frame titles use "Topic | detail". End with \takeaway then \source.
+% Replace every bracketed placeholder.
+\documentclass[aspectratio=169,10pt,t]{beamer}
+\usepackage[en]{labslide}
+
+\kicker{Paper introduction}
+\title[Paper introduction template]{Paper Introduction Slides}
+\subtitle{A template: one paper, from problem to method to results}
+\author{[Authors] ([Affiliation])}
+\venue{[Venue] [Year]}
+\date{[Date]}
+
+\begin{document}
+
+\begin{frame}[plain]
+  \labtitlepage{%
+    \agendacard[blue]{What is hard}{Name the scene in one sentence.}%
+    \hfill
+    \agendacard[orange]{What changes}{Inputs, training, and deployment.}%
+    \hfill
+    \agendacard[green]{What holds}{The baseline, and what remains.}%
+  }
+\end{frame}
+
+\begin{frame}{Problem | The situation this paper takes on}
+  State the robot, the environment, and the constraint in one sentence.
+
+  \begin{itemize}
+    \item Constraint 1: time, sensing, compute, or safety.
+    \item Constraint 2: the information available at training differs from deployment.
+    \item Constraint 3: the cost of a failure while collecting data.
+  \end{itemize}
+
+  \takeaway{Say whether the paper trains the gait, the adaptation, or both.}
+  \source{[Authors], [year], Sec.~1}
+\end{frame}
+
+\begin{frame}{Related work | Where the approaches differ}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.32\textwidth}
+      \infocard[blue]{[Line A]}{What is designed by hand. Where it holds, and where it breaks.}
+    \end{column}
+    \hfill
+    \begin{column}{0.32\textwidth}
+      \infocard[orange]{[Line B]}{What is randomized for robustness. The performance that is given up.}
+    \end{column}
+    \hfill
+    \begin{column}{0.32\textwidth}
+      \infocard[green]{[Line C]}{What is collected at deployment. How many trials that takes.}
+    \end{column}
+  \end{columns}
+
+  \takeaway{State which missing piece of which line this paper fills.}
+  \source{[Authors], [year], Sec.~2}
+\end{frame}
+
+\begin{frame}{Comparison | Same goal, different place to intervene}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.48\textwidth}
+      \infocard[orange]{[Method A]}{%
+        Cue: [input].\\[0.25em]
+        Aim: [quantity improved].\\[0.25em]
+        Left open: [next question].}
+    \end{column}
+    \hfill
+    \begin{column}{0.48\textwidth}
+      \infocard[blue]{[Method B]}{%
+        Cue: [input].\\[0.25em]
+        Aim: [quantity improved].\\[0.25em]
+        Left open: [next question].}
+    \end{column}
+  \end{columns}
+
+  \takeaway{Describe the difference as a difference of information, then of outcome.}
+  \source{[Paper A] / [Paper B]}
+\end{frame}
+
+\begin{frame}{Method | Split the inputs used in training and at runtime}
+  \centering
+  \vspace{1.2em}
+  {\footnotesize\color{muted} During training}\\[0.45em]
+  \flowbox{Environment\\{[$e_t$]}}
+  \flowarrow
+  \flowbox{Encoder\\{[$\mu$]}}
+  \flowarrow
+  \flowbox{Latent\\{[$z_t$]}}
+  \flowarrow
+  \flowbox{Policy\\{[$\pi$]}}
+  \flowarrow
+  \flowbox{Action\\{[$a_t$]}}
+
+  \vspace{1.5em}
+  {\footnotesize\color{muted} At deployment}\\[0.45em]
+  \flowbox{Recent\\history}
+  \flowarrow
+  \flowbox{Estimator\\{[$\phi$]}}
+  \flowarrow
+  \flowbox{Estimate\\{[$\hat z_t$]}}
+  \flowarrow
+  \flowbox{Same policy\\{[$\pi$]}}
+
+  \takeaway{State which input exists only in training, and what replaces it at runtime.}
+  \source{[Authors], [year], Fig.~X / Sec.~3}
+\end{frame}
+
+\begin{frame}{Definitions | Give each symbol a dimension and a role}
+  \[
+    z_t = \mu(e_t), \qquad a_t = \pi(x_t, a_{t-1}, z_t)
+  \]
+
+  \begin{itemize}
+    \item $x_t$: [contents and dimension of the state].
+    \item $a_t$: [contents of the action], and how it becomes torque or position.
+    \item $e_t$: [quantities available only in training]. $z_t$ is their summary.
+  \end{itemize}
+
+  \takeaway{Say whether the estimate is a physical parameter or the summary the policy uses.}
+  \source{[Authors], [year], Sec.~3.1}
+\end{frame}
+
+\begin{frame}{Results | Hold the comparison to the adaptation itself}
+  \vspace{0.4em}
+  \centering
+  {\footnotesize
+  \begin{tabular}{lccc}
+    \toprule
+    Method & Success (\%) & Time to fall & Distance \\
+    \midrule
+    {[Baseline A]} & -- & -- & -- \\
+    {[Baseline B]} & -- & -- & -- \\
+    Proposed & -- & -- & -- \\
+    \midrule
+    {[Upper bound]} & -- & -- & -- \\
+    \bottomrule
+  \end{tabular}}
+
+  \vspace{0.8em}
+  \raggedright
+  State the test condition in one line: [does the environment change mid-episode, and are real-world samples required].
+
+  \takeaway{Read each number against the upper bound and against the extra data it needs.}
+  \source{[Authors], [year], Table~X}
+\end{frame}
+
+\begin{frame}{Summary | Name the question that is still open}
+  \begin{itemize}
+    \item The policy is trained with [privileged inputs], and those inputs are recovered at runtime from [history or sensors].
+    \item Left unused: reference motions, extra real-world learning, and simulator calibration.
+    \item Evidence: [simulation comparison] and [real scenes].
+    \item Limit: [when it fails], and the next sensor that would address it.
+  \end{itemize}
+
+  \takeaway{Leave one sentence: which module adapts, and from which information.}
+  \source{[Authors], [year], conclusion}
+\end{frame}
+
+\begin{frame}{References}
+  {\small
+  \begin{enumerate}
+    \item {[Authors]. [Title]. [Venue], [year].}\\
+      \url{https://arxiv.org/abs/0000.00000}
+    \item {[First author] et al. [Title]. [Venue], [year].}
+  \end{enumerate}}
+  \vfill
+  {\scriptsize\color{muted}
+  Match the section numbers used in the talk. First author plus ``et al.'' is enough.}
+\end{frame}
+
+\end{document}

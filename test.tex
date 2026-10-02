@@ -1,0 +1,56 @@
+%A4: 21.0 x 29.7cm
+\documentclass[a4paper,11pt]{ltjsarticle}
+
+% 数式
+\usepackage{amsmath,amsfonts}
+\usepackage{mathtools}
+\usepackage{bm}
+% 画像
+\usepackage{graphics}
+\usepackage{graphicx}
+\usepackage{here} %画像の表示位置調整用
+\usepackage{setspace}
+% 句読点
+\directlua{
+    luatexbase.add_to_callback("process_input_buffer", function(line)
+      line = line:gsub("、", "，")
+      line = line:gsub("。", "．")
+      return line
+    end, "replace_kuten_and_touten")
+}
+\title{LaTeX Test}
+
+
+\begin{document}
+
+\maketitle
+
+% 目次
+% \tableofcontents
+% \newpage
+
+% 本文
+\section{はじめに}
+ここでは、LaTeXの基本的な使い方を説明します。
+
+\begin{equation}
+E = mc^2
+\end{equation}
+
+%画像(jpg/png)表示
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=15cm]{img/nvidia.png} %source
+  \caption{NVIDIA} %caption
+  \label{sample_image}
+\end{figure}
+
+%画像(jpg/png)表示
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=15cm]{img/nvidia.png} %source
+  \caption{NVIDIA2} %caption
+  \label{sample_image}
+\end{figure}
+
+\end{document}

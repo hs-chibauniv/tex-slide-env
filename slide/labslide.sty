@@ -1,0 +1,283 @@
+% 16:9 theme matched to sample/kawamoto (MoERLOverview).
+% Navy #22324A, rule #356AA0, pastel cards, white-on-navy takeaway.
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{labslide}[2026/09/30 Lab paper-introduction slides]
+
+\RequirePackage{kvoptions}
+\SetupKeyvalOptions{family=labslide,prefix=labslide@}
+\DeclareBoolOption{ja}
+\DeclareBoolOption{en}
+\ProcessKeyvalOptions*
+
+\usefonttheme{professionalfonts}
+\RequirePackage{amsmath,amssymb,booktabs,graphicx,tikz}
+\usetikzlibrary{arrows.meta,positioning}
+
+\iflabslide@ja
+  \RequirePackage[haranoaji,deluxe]{luatexja-preset}
+  \renewcommand{\kanjifamilydefault}{\gtdefault}
+  \directlua{
+    luatexbase.add_to_callback("process_input_buffer", function(line)
+      line = line:gsub("、", "，")
+      line = line:gsub("。", "．")
+      return line
+    end, "labslide_replace_kuten")
+  }
+\else
+  \RequirePackage{fontspec}
+\fi
+
+\setmainfont{Latin Modern Roman}
+\setsansfont{Latin Modern Sans}
+
+\definecolor{ink}{HTML}{22324A}
+\definecolor{ruleblue}{HTML}{356AA0}
+\definecolor{kickerblue}{HTML}{6A93B8}
+\definecolor{muted}{HTML}{8B95A1}
+\definecolor{body}{HTML}{3E4C5E}
+% Kawamoto (MoERL / AD4RL): pale blue, amber, green. Text on cards stays navy.
+\definecolor{corange}{HTML}{F8F0E0}
+\definecolor{corangett}{HTML}{C47820}
+\definecolor{cblue}{HTML}{E8F0F8}
+\definecolor{cbluett}{HTML}{2F68A0}
+\definecolor{cgreen}{HTML}{E8F0E8}
+\definecolor{cgreentt}{HTML}{387840}
+\definecolor{cplain}{HTML}{F3F4F6}
+\definecolor{cplaintt}{HTML}{5C6B7A}
+\colorlet{cred}{corange}
+\colorlet{credtt}{corangett}
+\tikzset{
+  kw/.style={
+    rounded corners=1.4pt,
+    line width=0.55pt,
+    align=center,
+    font=\footnotesize,
+    text=ink,
+    inner xsep=4pt,
+    inner ysep=3.5pt
+  },
+  kwblue/.style={kw, draw=cbluett, fill=cblue},
+  kworange/.style={kw, draw=corangett, fill=corange},
+  kwgreen/.style={kw, draw=cgreentt, fill=cgreen},
+  kwarr/.style={-{Stealth[length=1.5mm]}, draw=ink, line width=0.5pt}
+}
+
+\setbeamercolor{normal text}{fg=ink,bg=white}
+\setbeamercolor{frametitle}{fg=ink,bg=white}
+\setbeamercolor{structure}{fg=ruleblue}
+\setbeamercolor{item}{fg=ruleblue}
+\setbeamercolor{footline}{fg=muted,bg=white}
+\hypersetup{colorlinks=true,urlcolor=muted,linkcolor=ruleblue}
+
+\setbeamerfont{frametitle}{size=\fontsize{14}{17}\selectfont,series=\bfseries}
+\setbeamertemplate{navigation symbols}{}
+\setbeamertemplate{headline}{}
+\setbeamersize{text margin left=7mm,text margin right=7mm}
+\makeatletter
+\setlength{\beamer@frametopskip}{0.5mm}
+\makeatother
+
+\setbeamertemplate{itemize item}{\scriptsize\textcolor{ruleblue}{\textbullet}}
+\setbeamertemplate{itemize subitem}{\scriptsize\textcolor{muted}{--}}
+\setlength{\leftmargini}{1.1em}
+\setlength{\itemsep}{0.32em}
+
+\setbeamertemplate{frametitle}{%
+  \vspace{0.2mm}%
+  {\usebeamerfont{frametitle}\color{ink}\insertframetitle\par}%
+  \vspace{1.15mm}%
+  {\color{ruleblue}\rule{\textwidth}{0.7pt}\par}%
+  \vspace{1.6mm}%
+  \ifx\insertframesubtitle\@empty\else
+    {\footnotesize\color{muted}\insertframesubtitle\par}%
+    \vspace{1.2mm}%
+  \fi
+}
+
+\gdef\insertsource{}
+\newcounter{flowi}
+\BeforeBeginEnvironment{frame}{\gdef\insertsource{}\setcounter{flowi}{0}}
+
+\setbeamertemplate{footline}{%
+  \leavevmode%
+  \hbox{%
+    \begin{beamercolorbox}[wd=\paperwidth,ht=2.5ex,dp=0.9ex,leftskip=7mm,rightskip=7mm]{footline}%
+      \scriptsize\color{muted}%
+      \insertsource\hfill
+      \insertframenumber/\inserttotalframenumber%
+    \end{beamercolorbox}%
+  }%
+}
+
+\newcommand{\insertkicker}{}
+\newcommand{\kicker}[1]{\renewcommand{\insertkicker}{#1}}
+\newcommand{\insertvenue}{}
+\newcommand{\venue}[1]{\renewcommand{\insertvenue}{#1}}
+
+% orange (also red) = the warm thread. blue = the cool thread. green = the third.
+% A row of peers uses these three, as in the Kawamoto samples.
+\newcommand{\usecardcolor}[1]{%
+  \def\cardfill{cgreen}%
+  \def\cardtitlec{cgreentt}%
+  \ifstrequal{#1}{red}{%
+    \def\cardfill{corange}%
+    \def\cardtitlec{corangett}%
+  }{}%
+  \ifstrequal{#1}{orange}{%
+    \def\cardfill{corange}%
+    \def\cardtitlec{corangett}%
+  }{}%
+  \ifstrequal{#1}{blue}{%
+    \def\cardfill{cblue}%
+    \def\cardtitlec{cbluett}%
+  }{}%
+  \ifstrequal{#1}{green}{%
+    \def\cardfill{cgreen}%
+    \def\cardtitlec{cgreentt}%
+  }{}%
+  \ifstrequal{#1}{plain}{%
+    \def\cardfill{cplain}%
+    \def\cardtitlec{cplaintt}%
+  }{}%
+  \ifstrequal{#1}{gray}{%
+    \def\cardfill{cplain}%
+    \def\cardtitlec{cplaintt}%
+  }{}%
+}
+
+% [color]{title}{body}
+\newcommand{\agendacard}[3][green]{%
+  \usecardcolor{#1}%
+  \begin{tikzpicture}[baseline=(card.north)]
+    \node[
+      anchor=north west,
+      fill=\cardfill,
+      text width=42mm,
+      minimum height=15.5mm,
+      inner xsep=7pt,
+      inner ysep=5.5pt,
+      align=flush left
+    ] (card) {%
+      {\color{\cardtitlec}\bfseries #2}\\[0.28em]
+      {\color{muted}\footnotesize #3}%
+    };
+  \end{tikzpicture}%
+}
+
+% [color]{title}{body}  for use inside a column
+\newcommand{\infocard}[3][green]{%
+  \usecardcolor{#1}%
+  \begin{tikzpicture}[baseline=(card.north)]
+    \node[
+      anchor=north west,
+      fill=\cardfill,
+      text width=\dimexpr\linewidth-14pt\relax,
+      inner xsep=6.5pt,
+      inner ysep=5.5pt,
+      align=flush left
+    ] (card) {%
+      {\color{\cardtitlec}\bfseries #2}\\[0.32em]
+      {\color{body}\footnotesize #3}%
+    };
+  \end{tikzpicture}%
+}
+
+\newcommand{\labtitlepage}[1]{%
+  \vspace*{12mm}%
+  {\color{kickerblue}\footnotesize \insertkicker\par}%
+  \vspace{3.2mm}%
+  {\fontsize{22}{26}\selectfont\bfseries\color{ink}\inserttitle\par}%
+  \vspace{1.5mm}%
+  {\fontsize{14}{18}\selectfont\bfseries\color{ink}\insertsubtitle\par}%
+  \vspace{2.6mm}%
+  {\color{ruleblue}\rule{\textwidth}{0.75pt}\par}%
+  \vspace{2.2mm}%
+  {\footnotesize\color{body}%
+    \insertauthor
+    \ifx\insertvenue\@empty\else
+      \quad\textcolor{muted}{\textbar}\quad\insertvenue
+    \fi
+    \par}%
+  \vspace{0pt plus 100fill}%
+  \noindent #1\par
+  \vspace{3.2mm}%
+  {\scriptsize\color{muted}\insertdate\hfill
+    \insertframenumber/\inserttotalframenumber\par}%
+}
+
+% Navy bar, white text. Sits above the citation footer.
+\newcommand{\takeaway}[1]{%
+  \par\vspace{0pt plus 100fill}%
+  \begingroup
+  \setlength{\fboxsep}{5pt}%
+  \noindent\colorbox{ink}{%
+    \parbox[c]{\dimexpr\textwidth-10pt\relax}{%
+      \color{white}\footnotesize #1}}%
+  \endgroup
+}
+
+% Citation goes in the footline, on the same row as the page number.
+\newcommand{\source}[1]{\gdef\insertsource{#1}}
+
+% [color]{label}  pastel tag
+\newcommand{\chip}[2][gray]{%
+  \usecardcolor{#1}%
+  \begin{tikzpicture}[baseline=(n.base)]
+    \node[
+      fill=\cardfill,
+      rounded corners=1pt,
+      inner xsep=4.5pt,
+      inner ysep=2pt,
+      font=\footnotesize
+    ] (n) {\textcolor{\cardtitlec}{\bfseries #2}};
+  \end{tikzpicture}%
+}
+
+% [color]{value}{caption}  pale card, navy figure, hairline in the thread color
+\newcommand{\metricbox}[3][green]{%
+  \usecardcolor{#1}%
+  \begin{tikzpicture}[baseline=(n.north)]
+    \node[
+      draw=\cardtitlec,
+      fill=\cardfill,
+      line width=0.5pt,
+      rounded corners=1.3pt,
+      text width=31mm,
+      minimum height=14.5mm,
+      align=center,
+      inner xsep=3pt,
+      inner ysep=4pt,
+      text=ink
+    ] (n) {%
+      {\bfseries\fontsize{14}{16}\selectfont #2}\\[0.18em]
+      {\color{muted}\footnotesize #3}%
+    };
+  \end{tikzpicture}%
+}
+
+% Pale node, hairline, navy text. Same drawing as the Kawamoto flow boxes.
+\newcommand{\flowbox}[2][green]{%
+  \usecardcolor{#1}%
+  \begin{tikzpicture}[baseline=(b.center)]
+    \node[
+      draw=\cardtitlec,
+      fill=\cardfill,
+      text=ink,
+      line width=0.55pt,
+      rounded corners=1.4pt,
+      inner xsep=4pt,
+      inner ysep=3.5pt,
+      text width=22mm,
+      align=center,
+      font=\footnotesize
+    ] (b) {#2};
+  \end{tikzpicture}%
+}
+
+\newcommand{\flowarrow}{%
+  \hspace{0.15em}%
+  \begin{tikzpicture}[baseline=-0.55ex]
+    \draw[kwarr] (0,0) -- (4.2mm,0);
+  \end{tikzpicture}%
+  \hspace{0.15em}%
+}

@@ -1,0 +1,173 @@
+% 論文紹介スライドのひな形．
+% コンパイル（slide/ で実行）:
+%   lualatex -interaction=nonstopmode -output-directory=out template_ja.tex
+% 色，余白，表紙，要点バーは labslide.sty．
+% フレーム題は「主題 ｜ 補足」．末尾は \takeaway のあと \source．
+% ［ ］は差し替え箇所．
+\documentclass[aspectratio=169,10pt,t]{beamer}
+\usepackage[ja]{labslide}
+
+\kicker{論文紹介}
+\title[論文紹介テンプレート]{論文紹介スライド}
+\subtitle{ひな形：問題，手法，結果の順で一編を紹介する}
+\author{［著者名］（［所属］）}
+\venue{［会議名］ ［年］}
+\date{［発表日］}
+
+\begin{document}
+
+\begin{frame}[plain]
+  \labtitlepage{%
+    \agendacard[blue]{何が難しいか}{未解決の場面を一文で書く．}%
+    \hfill
+    \agendacard[orange]{どこを変えるか}{入力，学習，実行の違い．}%
+    \hfill
+    \agendacard[green]{何が言えるか}{比較相手と，残る限界．}%
+  }
+\end{frame}
+
+\begin{frame}{問題 ｜ この論文が扱う場面}
+  ［ロボット，環境，制約］を一文で置く．
+
+  \begin{itemize}
+    \item ［制約 1］：時間，センサ，計算，安全性のどれか．
+    \item ［制約 2］：学習時と実行時で，使える情報が違う．
+    \item ［制約 3］：失敗したときに払うコスト．
+  \end{itemize}
+
+  \takeaway{歩き方そのものに加え，適応のしかたも学習の対象だと書く．}
+  \source{［著者］, ［年］, §1}
+\end{frame}
+
+\begin{frame}{関連研究 ｜ 違いが出る場所}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.32\textwidth}
+      \infocard[blue]{［系統 A］}{何を手で与えるか．得意な条件と，崩れる条件．}
+    \end{column}
+    \hfill
+    \begin{column}{0.32\textwidth}
+      \infocard[orange]{［系統 B］}{何をばらして頑健にするか．失う性能．}
+    \end{column}
+    \hfill
+    \begin{column}{0.32\textwidth}
+      \infocard[green]{［系統 C］}{実行時に何を追加で集めるか．必要な試行回数．}
+    \end{column}
+  \end{columns}
+
+  \takeaway{この論文がどの系統の，どの欠ける情報を埋めるかを一文で書く．}
+  \source{［著者］, ［年］, §2}
+\end{frame}
+
+\begin{frame}{比較 ｜ 同じ目的でも，変える場所が違う}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.48\textwidth}
+      \infocard[orange]{［手法 A］}{%
+        手がかり：［入力］．\\[0.25em]
+        狙い：［改善したい量］．\\[0.25em]
+        残る点：［次の問い］．}
+    \end{column}
+    \hfill
+    \begin{column}{0.48\textwidth}
+      \infocard[blue]{［手法 B］}{%
+        手がかり：［入力］．\\[0.25em]
+        狙い：［改善したい量］．\\[0.25em]
+        残る点：［次の問い］．}
+    \end{column}
+  \end{columns}
+
+  \takeaway{二者の違いは優劣ではなく，使う情報の違いとして書く．}
+  \source{［論文 A］ / ［論文 B］}
+\end{frame}
+
+\begin{frame}{手法 ｜ 学習時と実行時で，入力を分ける}
+  \centering
+  \vspace{1.2em}
+  {\footnotesize\color{muted} 学習時}\\[0.45em]
+  \flowbox{環境の情報\\［$e_t$］}
+  \flowarrow
+  \flowbox{符号化器\\［$\mu$］}
+  \flowarrow
+  \flowbox{潜在変数\\［$z_t$］}
+  \flowarrow
+  \flowbox{方策\\［$\pi$］}
+  \flowarrow
+  \flowbox{行動\\［$a_t$］}
+
+  \vspace{1.5em}
+  {\footnotesize\color{muted} 実行時}\\[0.45em]
+  \flowbox{直近の履歴}
+  \flowarrow
+  \flowbox{推定器\\［$\phi$］}
+  \flowarrow
+  \flowbox{推定した\\［$\hat z_t$］}
+  \flowarrow
+  \flowbox{同じ方策\\［$\pi$］}
+
+  \takeaway{実行時に無い情報は，学習時だけ使い，代わりに何から復元するかを書く．}
+  \source{［著者］, ［年］, Fig.~X / §3}
+\end{frame}
+
+\begin{frame}{定義 ｜ 記号は，次元と役割だけ先に置く}
+  \[
+    z_t = \mu(e_t), \qquad a_t = \pi(x_t, a_{t-1}, z_t)
+  \]
+
+  \begin{itemize}
+    \item $x_t$：［状態の中身と次元］．
+    \item $a_t$：［行動の中身］．トルクや位置のどちらに変換するか．
+    \item $e_t$：［学習時だけ使える量］．$z_t$ はその要約．
+  \end{itemize}
+
+  \takeaway{推定対象は物理パラメータそのものか，方策が使う要約か，を明示する．}
+  \source{［著者］, ［年］, §3.1}
+\end{frame}
+
+\begin{frame}{結果 ｜ 比較は，適応の有無に寄せる}
+  \vspace{0.4em}
+  \centering
+  {\footnotesize
+  \begin{tabular}{lccc}
+    \toprule
+    手法 & 成功率 (\%) & 転倒までの時間 & 距離 \\
+    \midrule
+    ［比較 A］ & -- & -- & -- \\
+    ［比較 B］ & -- & -- & -- \\
+    提案手法 & -- & -- & -- \\
+    \midrule
+    ［上限］ & -- & -- & -- \\
+    \bottomrule
+  \end{tabular}}
+
+  \vspace{0.8em}
+  \raggedright
+  テスト条件を一行で書く．［環境を途中で変えるか，実機データが要るか．］
+
+  \takeaway{数字は，上限との差と，追加データが要るかを対にして読む．}
+  \source{［著者］, ［年］, Table~X}
+\end{frame}
+
+\begin{frame}{まとめ ｜ 残った問いは，次の感覚器や条件}
+  \begin{itemize}
+    \item ［学習時の情報］で方策を学び，実行時は［履歴やセンサ］から復元する．
+    \item ［使わなかったもの］：参照軌道，実機での追加学習，シミュレータの校正．
+    \item 結果：［シミュレーションの比較］と［実機の場面］．
+    \item 限界：［失敗する条件］．次に足す情報．
+  \end{itemize}
+
+  \takeaway{聴き手に残す一文．何を分担し，どの情報で適応しているか．}
+  \source{［著者］, ［年］, §結論}
+\end{frame}
+
+\begin{frame}{文献}
+  {\small
+  \begin{enumerate}
+    \item ［著者］. ［題名］. ［発表先］, ［年］.\\
+      \url{https://arxiv.org/abs/0000.00000}
+    \item ［比較論文の筆頭著者］ et al. ［題名］. ［発表先］, ［年］.
+  \end{enumerate}}
+  \vfill
+  {\scriptsize\color{muted}
+  本文の節番号と対応させる．著者は筆頭著者＋ et al.\ で足りる．}
+\end{frame}
+
+\end{document}

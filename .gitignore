@@ -1,0 +1,15 @@
+# LaTeX intermediates
+*.aux
+*.log
+*.nav
+*.snm
+*.toc
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+*.bbl
+*.blg
+
+# Compile directories
+/out/
+slide/out/

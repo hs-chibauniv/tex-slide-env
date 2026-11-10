@@ -1,0 +1,33 @@
+{
+  "workbench.editorAssociations": {
+    "**/slide/out/*.pdf": "latex-workshop-pdf-hook",
+    "**/slide/out/**/*.pdf": "latex-workshop-pdf-hook"
+  },
+  "latex-workshop.view.pdf.viewer": "tab",
+  "latex-workshop.view.pdf.internal.synctex.keybinding": "double-click",
+  "latex-workshop.latex.outDir": "%DIR%/out",
+  "latex-workshop.latex.autoBuild.run": "onSave",
+  "latex-workshop.latex.recipe.default": "LuaLaTeX",
+  "latex-workshop.latex.recipes": [
+    {
+      "name": "LuaLaTeX",
+      "tools": ["lualatex-tool"]
+    }
+  ],
+  "latex-workshop.latex.tools": [
+    {
+      "name": "lualatex-tool",
+      "command": "bash",
+      "args": [
+        "-c",
+        "d=\"$PWD\"; while [[ ! -f \"$d/lualatex-dated.sh\" && \"$d\" != / ]]; do d=$(dirname \"$d\"); done; exec \"$d/lualatex-dated.sh\" \"$@\"",
+        "lualatex-dated",
+        "-synctex=1",
+        "-interaction=nonstopmode",
+        "-file-line-error",
+        "-output-directory=%OUTDIR%",
+        "%DOC%"
+      ]
+    }
+  ]
+}

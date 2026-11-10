@@ -23,18 +23,25 @@
         "latex-workshop.latex.tools": [
           {
             "name": "lualatex-tool",
-            "command": "lualatex",
+            "command": "bash",
             "args": [
+              "-c",
+              "d=\"$PWD\"; while [[ ! -f \"$d/lualatex-dated.sh\" && \"$d\" != / ]]; do d=$(dirname \"$d\"); done; exec \"$d/lualatex-dated.sh\" \"$@\"",
+              "lualatex-dated",
               "-synctex=1",
               "-interaction=nonstopmode",
               "-file-line-error",
-              // 👇 2. 出力先を lualatex コマンドにも伝える指示を追加
-              "-output-directory=%OUTDIR%", 
+              "-output-directory=%OUTDIR%",
               "%DOC%"
             ]
           }
         ],
         "latex-workshop.view.pdf.viewer": "tab",
+        "latex-workshop.view.pdf.internal.synctex.keybinding": "double-click",
+        "workbench.editorAssociations": {
+          "**/slide/out/*.pdf": "latex-workshop-pdf-hook",
+          "**/slide/out/**/*.pdf": "latex-workshop-pdf-hook"
+        },
         "python.defaultInterpreterPath": "/usr/bin/python3"
       }
     }

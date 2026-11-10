@@ -1,0 +1,838 @@
+% Compile from slide/20261007/ (PDF: slide/out/20261007/ , other files: build/):
+%   ../lualatex-dated.sh -synctex=1 -interaction=nonstopmode -file-line-error -output-directory=out survey_kawamotostyle_20261007_handout_v3_en.tex
+\documentclass[aspectratio=169,10pt,t,handout]{beamer}
+\usepackage[en]{labslide}
+% Raise every requested font size by 1pt, as in the Japanese handout.
+\makeatletter
+\newdimen\labvtwo@size
+\newskip\labvtwo@skip
+\let\labvtwo@set@fontsize\set@fontsize
+\def\set@fontsize#1#2#3{%
+  \@defaultunits\labvtwo@size#2pt\relax\@nnil
+  \advance\labvtwo@size by 1pt\relax
+  \@defaultunits\labvtwo@skip#3pt\relax\@nnil
+  \advance\labvtwo@skip by 1pt\relax
+  \begingroup
+    \edef\x{\endgroup
+      \noexpand\labvtwo@set@fontsize{\unexpanded{#1}}{\strip@pt\labvtwo@size}{\the\labvtwo@skip}%
+    }\x
+}
+\makeatother
+\usetikzlibrary{fit,backgrounds,calc}
+
+% Place the title midway between the top of the page and the rule below it.
+\makeatletter
+\setlength{\beamer@frametopskip}{0mm}
+\makeatother
+\setbeamertemplate{frametitle}{%
+  \vspace{4.2mm}%
+  {\usebeamerfont{frametitle}\color{ink}\insertframetitle\par}%
+  \vspace{0.4mm}%
+  {\color{ruleblue}\rule{\textwidth}{0.7pt}\par}%
+  \vspace{1.1mm}%
+  \ifx\insertframesubtitle\@empty\else
+    {\footnotesize\color{muted}\insertframesubtitle\par}%
+    \vspace{1.2mm}%
+  \fi
+}
+
+\definecolor{cviolet}{HTML}{F3E8F6}
+\definecolor{cviolettt}{HTML}{7A458E}
+% Same pastel fill and mid-tone title as the other cards. Red is not an alias of orange.
+\definecolor{cred}{HTML}{F8E6E6}
+\definecolor{credtt}{HTML}{C44545}
+\renewcommand{\usecardcolor}[1]{%
+  \def\cardfill{cgreen}%
+  \def\cardtitlec{cgreentt}%
+  \ifstrequal{#1}{red}{%
+    \def\cardfill{cred}%
+    \def\cardtitlec{credtt}%
+  }{}%
+  \ifstrequal{#1}{orange}{%
+    \def\cardfill{corange}%
+    \def\cardtitlec{corangett}%
+  }{}%
+  \ifstrequal{#1}{blue}{%
+    \def\cardfill{cblue}%
+    \def\cardtitlec{cbluett}%
+  }{}%
+  \ifstrequal{#1}{green}{%
+    \def\cardfill{cgreen}%
+    \def\cardtitlec{cgreentt}%
+  }{}%
+  \ifstrequal{#1}{violet}{%
+    \def\cardfill{cviolet}%
+    \def\cardtitlec{cviolettt}%
+  }{}%
+  \ifstrequal{#1}{plain}{%
+    \def\cardfill{cplain}%
+    \def\cardtitlec{cplaintt}%
+  }{}%
+  \ifstrequal{#1}{gray}{%
+    \def\cardfill{cplain}%
+    \def\cardtitlec{cplaintt}%
+  }{}%
+}
+
+\graphicspath{{fig/survey/}}
+
+\kicker{Survey}
+\title{A local planner that chooses\\easy ground for a quadruped}
+\date{October 2026}
+
+% Bullets inside cards. The second optional argument matches heights in a row.
+\newcommand{\li}{%
+  \ifvmode\else\par\fi
+  \noindent\hangindent=1.15em\hangafter=1
+  \makebox[1.15em][l]{\textcolor{ruleblue}{\textbullet}}\ignorespaces}
+\newcommand{\lii}{%
+  \ifvmode\else\par\fi
+  \noindent\hspace{1.0em}\hangindent=2.15em\hangafter=1
+  \makebox[1.05em][l]{\textcolor{muted}{\textendash}}\ignorespaces}
+
+% Cancel the \topskip gap above the first card, then share the remaining space.
+\newcommand{\cardbalance}{\par\vspace*{-\topskip}\vspace{0pt plus 1fill}}
+\newcommand{\takeawaybalance}[1]{%
+  \par\vspace{0.15em plus 1fill}%
+  \begingroup
+  \setlength{\fboxsep}{5pt}%
+  \noindent\colorbox{ink}{%
+    \parbox[c]{\dimexpr\textwidth-10pt\relax}{%
+      \color{white}\footnotesize #1}}%
+  \endgroup
+}
+
+\RenewDocumentCommand{\infocard}{O{green} o m m}{%
+  \usecardcolor{#1}%
+  \IfValueTF{#2}{\def\cardminh{#2}}{\def\cardminh{0pt}}%
+  \begin{tikzpicture}[baseline=(card.north)]
+    \node[
+      anchor=north west,
+      fill=\cardfill,
+      text width=\dimexpr\linewidth-14pt\relax,
+      minimum height=\cardminh,
+      inner xsep=6.5pt,
+      inner ysep=4pt,
+      align=flush left
+    ] (card) {%
+      {\color{\cardtitlec}\bfseries #3}\par\vspace{0.15em}%
+      {\color{body}\footnotesize #4\par}%
+    };
+  \end{tikzpicture}%
+}
+
+\begin{document}
+
+\begin{frame}[plain]
+  \labtitlepage{
+    B4, Hiromu Saito, 2026/10/07
+  }
+\end{frame}
+
+\begin{frame}{Research theme | Robot control}
+  \centering
+  \begin{tikzpicture}[node distance=6.5mm]
+    \node[kworange, text width=28mm, minimum height=8mm] (c) {Controller};
+    \node[kwgreen, text width=28mm, minimum height=8mm, right=of c] (p) {Local planner};
+    \node[kwblue, text width=28mm, minimum height=8mm, right=of p] (g) {Gait model};
+    \node[kwpurple, text width=24mm, minimum height=8mm, right=of g] (m) {Motor};
+    \draw[kwarr] (c) -- (p)
+      node[midway, below=4mm, font=\scriptsize, text=muted] {target pose};
+    \draw[kwarr] (p) -- (g)
+      node[midway, below=4mm, font=\scriptsize, text=muted] {target speed};
+    \draw[kwarr] (g) -- (m)
+      node[midway, below=4mm, font=\scriptsize, text=muted] {torque};
+  \end{tikzpicture}
+
+  \vspace{1.5em}
+  \includegraphics[width=\textwidth,height=35mm,keepaspectratio]{img001.png}
+
+  \takeaway{In general, the input reaches the motors through three transforms.}
+\end{frame}
+
+\begin{frame}{Research theme | Local planner}
+  \centering
+  \begin{tikzpicture}[node distance=6.5mm]
+    \node[kworange, text width=28mm, minimum height=8mm, opacity=0.2] (c) {Controller};
+    \node[kwgreen, text width=28mm, minimum height=8mm, right=of c] (p) {Local planner};
+    \node[kwblue, text width=28mm, minimum height=8mm, right=of p] (g) {Gait model};
+    \node[kwpurple, text width=24mm, minimum height=8mm, right=of g, opacity=0.2] (m) {Motor};
+    \draw[kwarr] (c) -- (p)
+      node[midway, below=4mm, font=\scriptsize, text=muted] {target pose};
+    \draw[kwarr] (p) -- (g)
+      node[midway, below=4mm, font=\scriptsize, text=muted] {target speed};
+    \draw[kwarr] (g) -- (m)
+      node[midway, below=4mm, font=\scriptsize, text=muted] {torque};
+  \end{tikzpicture}
+
+  % img2
+  \includegraphics[width=\textwidth,height=35mm,keepaspectratio]{img002.png}
+
+  \takeaway{The target speed should cover both safety and preference.}
+\end{frame}
+
+\begin{frame}{Papers on preference}
+  \infocard[green][22mm]{Navigation from a walking-cost map}{%
+    \li Where Should I Walk? Predicting Terrain Properties From Images Via Self-Supervised Learning
+    \li IEEE RA-L, 2019
+    \li Cited by 268}
+  \vspace{0.4em}
+  \infocard[blue][22mm]{Navigation from RGB-D and reinforcement learning}{%
+    \li Traversability-Aware Legged Navigation by Learning from Real-World Visual Data
+    \li IEEE Transactions on Robotics
+    \li Cited by 13}
+
+  \takeaway{The first paper puts preference in a map. The second puts it in navigation.}
+\end{frame}
+
+% ---------- Wellhausen ----------
+
+\begin{frame}{Where Should I Walk?}
+  \source{Wellhausen et al., IEEE RA-L, 2019. Cited by 268}
+  \centering
+  \includegraphics[width=\textwidth,height=52mm,keepaspectratio]{wsiw_row.png}
+
+  \takeaway{RGB in, a cost map out, and Dijkstra draws the path.}
+\end{frame}
+
+\begin{frame}{Background and aim}
+  \source{Wellhausen et al., IEEE RA-L, 2019}
+  \cardbalance
+  \infocard[orange]{Background}{%
+    \li Natural ground is not only rigid
+    \li Even when flat, water, sand, and soil change with moisture
+    \lii A class defined by people still varies in its properties
+    \lii Manual annotation is very hard, or impossible}
+  \vspace{0.7em plus 1fill}
+  \infocard[green]{Aim}{%
+    \li Tie an RGB image to what the foot feels
+    \li Predict a walking cost from the RGB image}
+  \takeawaybalance{Tie foot sensation to the image, and predict a walking cost at each pixel.}
+\end{frame}
+
+\begin{frame}{Contributions}
+  \source{Wellhausen et al., IEEE RA-L, 2019}
+  \cardbalance
+  \infocard[blue]{Contribution 1}{\li Tie the camera image to the foot's contact force}
+  \vspace{0.35em}
+  \infocard[orange]{Contribution 2}{\li Predict terrain properties while walking. The metric is the ground reaction score}
+  \vspace{0.35em}
+  \infocard[green]{Contribution 3}{\li A CNN trained on sparse labels}
+  \vspace{0.35em}
+  \infocard[violet]{Contribution 4}{\li Intuitive navigation was achieved}
+  \takeawaybalance{Foot-sensor features become a ground reaction score, and that cost chooses the path.}
+\end{frame}
+
+\begin{frame}{Proposed method}
+  \source{Wellhausen et al., IEEE RA-L, 2019}
+  \centering
+  \begin{tikzpicture}[
+      scale=0.82, transform shape,
+      font=\footnotesize,
+      box/.style={kwblue, text width=32mm, minimum height=12mm, inner sep=2.5pt},
+      tag/.style={font=\scriptsize\bfseries, text=muted}
+    ]
+    \node[box] (lab) at (0,0) {Foothold labeling};
+    \node[box] (weak) at (4.35,1.15) {Weak labels\\{\scriptsize (Segmentation)}};
+    \node[box] (self) at (4.35,-1.15) {Self-supervised labels\\{\scriptsize (Ground Reaction Score)}};
+    \node[box] (cls) at (8.7,1.15) {Terrain-class estimator};
+    \node[box] (cost) at (8.7,-1.15) {Walking-cost map};
+    \node[box] (corr) at (13.05,1.15) {Check the correlation};
+    \node[box] (nav) at (13.05,-1.15) {Navigation\\{\scriptsize (Dijkstra)}};
+    \begin{scope}[on background layer]
+      \node[fill=cblue, rounded corners=1.6pt, inner sep=2.2mm, fit=(lab)] (p1) {};
+      \node[fill=corange, rounded corners=1.6pt, inner sep=2.2mm, fit=(weak)(self)] (p2) {};
+      \node[fill=cgreen, rounded corners=1.6pt, inner sep=2.6mm, fit=(cls)(cost)] (p3) {};
+      \node[fill=cviolet, rounded corners=1.6pt, inner sep=2.2mm, fit=(nav)] (p4) {};
+    \end{scope}
+    \node[tag, text=cbluett, anchor=south] at (p1.north) {Contrib.\ 1};
+    \node[tag, text=corangett, anchor=south] at (p2.north) {Contrib.\ 2};
+    \node[tag, text=cgreentt, anchor=south] at (p3.north) {Contrib.\ 3};
+    \node[tag] at ($(p3.north)+(0,-20.8mm)$) {Mean Teacher};
+    \node[tag, text=cviolettt, anchor=south] at (p4.north) {Contrib.\ 4};
+    \draw[kwarr] (lab.east) -- (weak.west);
+    \draw[kwarr] (lab.east) -- (self.west);
+    \draw[kwarr] (weak) -- (cls);
+    \draw[kwarr] (self) -- (cost);
+    \draw[kwarr] (cls) -- (corr);
+    \draw[kwarr] (cost) -- (nav);
+  \end{tikzpicture}
+
+  \takeaway{Weak labels check the terrain class. The self-supervised cost map chooses the path.}
+\end{frame}
+
+\begin{frame}{Contribution 1 | Foothold labeling}
+  \source{Wellhausen et al., IEEE RA-L, 2019}
+  \centering
+  {\footnotesize Transform the contact center and two points on the ellipse, three points in all, onto the image.\par}
+  \vspace{0.15em}
+  {\footnotesize
+  \[
+    \bigl[\, \mathbf{x}^{i,t}_{c} \quad \mathbf{x}^{i,t}_{1} \quad \mathbf{x}^{i,t}_{2} \,\bigr]
+    = \mathbf{K} \cdot \mathbf{T}^{t}_{CW} \cdot
+    \bigl[\, \mathbf{p}^{i}_{c} \quad \mathbf{p}^{i}_{1} \quad \mathbf{p}^{i}_{2} \,\bigr].
+  \]
+  }
+  \vspace{-0.55em}
+  {\footnotesize $K$: camera intrinsics. The matrix for the 3D-to-2D transform.\par}
+
+  \vspace{0.45em}
+  \includegraphics[width=\textwidth,height=32mm,keepaspectratio]{img003.png}
+
+  \takeaway{The transform and the RGB-D pose history locate the foothold in each image.}
+\end{frame}
+
+\begin{frame}{Labeling for weak supervision}
+  \source{Wellhausen et al., IEEE RA-L, 2019}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.50\textwidth}
+      \infocard[orange][32mm]{A person watches the video}{%
+        \li Label the intervals where the robot walks
+        \lii Asphalt, Path, Grass, Dirt, Sand
+        \li That frame's foothold receives the label
+        \li Pixels in the image receive the same label}
+    \end{column}
+    \hfill
+    \begin{column}{0.50\textwidth}
+      \centering
+      \includegraphics[width=\linewidth,height=45mm,keepaspectratio]{class_dots.png}\\[0.15em]
+      {\scriptsize\color{muted} Grass, Path, Sand}
+    \end{column}
+  \end{columns}
+
+  \takeaway{Weak supervision is for visualization and for evaluation.}
+\end{frame}
+
+\begin{frame}{Contribution 2 | Self-supervised ground reaction score}
+  \source{Wellhausen et al., IEEE RA-L, 2019}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.50\textwidth}
+      {\footnotesize\color{body} Define the Ground Reaction Score (GRS) at a point.}
+      \vspace{0.35em}
+      \infocard[blue][13mm]{1}{\li Torque-sensor series during contact}
+      \vspace{0.28em}
+      \infocard[orange][13mm]{2}{\li A wavelet transform yields 13860 dimensions}
+      \vspace{0.28em}
+      \infocard[green][13mm]{3}{\li The first principal component of PCA is the GRS}
+    \end{column}
+    \hfill
+    \begin{column}{0.50\textwidth}
+      \centering
+      \includegraphics[width=\linewidth,height=48mm,keepaspectratio]{grs_dots.png}
+    \end{column}
+  \end{columns}
+
+  \takeaway{The image shows that the GRS differs by material.}
+\end{frame}
+
+\begin{frame}{Contribution 3 | Labels are sparse, so use Mean Teacher}
+  \source{Wellhausen et al., IEEE RA-L, 2019}
+  \vspace*{-0.4mm}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.50\textwidth}
+      \infocard[orange][22mm]{Too sparse to train}{%
+        \li Most labels are at the feet. The upper image has little data
+        \li At most 10\% of the pixels are labeled}
+      \vspace{0.18em}
+      \infocard[blue][22mm]{Mean Teacher}{%
+        \li Different augmentations of the same image
+        \li Each augmentation goes into a different model
+        \li The image is the same, so the two outputs should match}
+    \end{column}
+    \hfill
+    \begin{column}{0.50\textwidth}
+      \centering
+      \includegraphics[width=\linewidth,height=48mm,keepaspectratio]{sparse.png}
+    \end{column}
+  \end{columns}
+
+  \takeaway{Foothold points alone are sparse, so training matches the two augmented outputs.}
+\end{frame}
+
+\begin{frame}{Mean Teacher}
+  \source{Wellhausen et al., IEEE RA-L, 2019}
+  \centering
+  \begin{tikzpicture}[scale=0.74, transform shape, box/.style={minimum height=10.5mm, text width=28mm, font=\normalsize}]
+    \node[kw, draw=cplaintt, fill=cplain, box] (img) at (0,0) {Image};
+    \node[kworange, box] (s) at (5.5,1.48) {Student Model};
+    \node[kwgreen, box] (t) at (5.5,-1.48) {Teacher Model};
+    \node[kwblue, box] (loss) at (10.2,0) {Difference\\[0.1em] LOSS};
+    \draw[kwarr] (img.east) -- (s.west)
+      node[pos=0.42, above=1.6mm, font=\footnotesize, text=muted] {Augmentation A};
+    \draw[kwarr] (img.east) -- (t.west)
+      node[pos=0.42, below=1.6mm, font=\footnotesize, text=muted] {Augmentation B};
+    \draw[kwarr] (s.east) -- (loss.north west);
+    \draw[kwarr] (t.east) -- (loss.south west);
+    \draw[kwarr, cgreentt] (s.south) -- (t.north)
+      node[midway, right=1.6mm, font=\footnotesize, text=cgreentt] {EMA};
+  \end{tikzpicture}
+
+  \vspace{0.08em}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.32\textwidth}
+      \infocard[blue][14mm]{Augmentation}{\li Augment the same image in two ways \li Feed the two models}
+    \end{column}
+    \hfill
+    \begin{column}{0.32\textwidth}
+      \infocard[orange][14mm]{Student}{\li The image is the same, so the output should match the Teacher. \li The difference is the loss}
+    \end{column}
+    \hfill
+    \begin{column}{0.32\textwidth}
+      \infocard[green][14mm]{Teacher}{\li No direct gradient step. \li Update by a moving average of the Student weights}
+    \end{column}
+  \end{columns}
+
+  \takeaway{Augmentation gives a target to unlabeled pixels, so they can be trained.}
+\end{frame}
+
+\begin{frame}{Results | Weakly supervised classification}
+  \source{Wellhausen et al., IEEE RA-L, 2019, Table~I}
+  \vspace{0.2em}
+  \centering
+  {\footnotesize
+  \begin{tabular}{lcccccc}
+    \toprule
+    & asphalt & path & grass & dirt & sand & Mean \\
+    \midrule
+    Accuracy & 93.1\% & 97.0\% & 97.3\% & 85.2\% & 80.3\% & \textbf{90.6\%} \\
+    \bottomrule
+  \end{tabular}
+  }
+
+  \vspace{0.7em}
+  \infocard[green]{Overall}{\li Mean accuracy is 90.6\%.}
+  \vspace{0.4em}
+  \infocard[orange]{dirt and sand}{\li Few samples, which may be why the accuracy is lower}
+
+  \takeaway{For labels this sparse, the result is very strong.}
+\end{frame}
+
+\begin{frame}{Results | Self-supervised regression}
+  \source{Wellhausen et al., IEEE RA-L, 2019}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.45\textwidth}
+      \centering
+      \includegraphics[width=\linewidth,height=42mm,keepaspectratio]{pca.png}
+    \end{column}
+    \hfill
+    \begin{column}{0.55\textwidth}
+      \infocard[green][22mm]{Separated by material}{%
+        \li The first principal component differs by terrain material}
+      \vspace{0.4em}
+      \infocard[orange][22mm]{Stiffer ground varies more}{%
+        \li Stiffer ground vibrates more at the instant of contact
+        \li The vibration may not be fully absorbed}
+    \end{column}
+  \end{columns}
+
+  \takeaway{The first component separates by material, and stiffer materials vary more.}
+\end{frame}
+
+\begin{frame}{Results | Class and ground reaction score}
+  \source{Wellhausen et al., IEEE RA-L, 2019}
+  \centering
+  \includegraphics[height=55mm]{img004.png}\hspace{1.2em}%
+  \includegraphics[height=20mm]{img005.png}
+
+  \takeaway{Terrain is classified by material, and each material has a characteristic predicted GRS.}
+\end{frame}
+
+\begin{frame}{Contribution 4 | Navigator}
+  \source{Wellhausen et al., IEEE RA-L, 2019}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.50\textwidth}
+      \vspace{2em}
+      \infocard[green][30mm]{Experiment}{%
+        \li 6\,Hz on a Jetson TX2
+        \li Predict the ground reaction score on a 10\,cm 2D grid
+        \li Always command the robot to go 10\,m ahead
+        \li Compute the path by Dijkstra}
+    \end{column}
+    \hfill
+    \begin{column}{0.50\textwidth}
+      \centering
+      \includegraphics[width=\linewidth,height=52mm,keepaspectratio]{navpath.png}
+    \end{column}
+  \end{columns}
+
+  \takeaway{It chose an easy path and walked along it.}
+\end{frame}
+
+\begin{frame}{Summary | Where Should I Walk?}
+  \source{Wellhausen et al., IEEE RA-L, 2019}
+  \cardbalance
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.49\textwidth}
+      \infocard[green][52mm]{Contributions}{%
+        \li Tie the camera image to the foot's contact force
+        \li Predict terrain properties while walking
+        \lii Ground reaction score
+        \li A CNN trained on sparse labels
+        \li Intuitive navigation}
+    \end{column}
+    \hfill
+    \begin{column}{0.49\textwidth}
+      \infocard[orange][25mm]{Limitations}{%
+        \li Weak in dynamic environments
+        \lii It looks only a short distance ahead
+        \lii Not suited to moving obstacles}
+      \vspace{0.4em}
+      \infocard[blue][25mm]{Outlook}{%
+        \li Put the walking cost into the gait controller
+        \lii This paper put it into path planning
+        \lii It might also set step length and step height}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{Papers on preference}
+  \infocard[green][22mm]{Navigation from a walking-cost map}{%
+    \li Where Should I Walk? Predicting Terrain Properties From Images Via Self-Supervised Learning
+    \li IEEE RA-L, 2019
+    \li Cited by 268}
+  \vspace{0.4em}
+  \infocard[blue][22mm]{Navigation from RGB-D and reinforcement learning}{%
+    \li Traversability-Aware Legged Navigation by Learning from Real-World Visual Data
+    \li IEEE Transactions on Robotics
+    \li Cited by 13}
+
+  \takeaway{The first paper puts preference in a map. The second puts it in navigation.}
+\end{frame}
+
+% ---------- Zhang et al. ----------
+
+\begin{frame}{Traversability-Aware Legged Navigation}
+  \source{Zhang et al., IEEE Transactions on Robotics. Cited by 13}
+
+  \vspace{0.25em}
+  \centering
+  \includegraphics[width=\textwidth,height=48mm,keepaspectratio]{trav_teaser.png}
+
+  \takeaway{An RL local planner that outputs velocity directly from RGB and depth.}
+\end{frame}
+
+\begin{frame}{Background and aim}
+  \source{Zhang et al., IEEE Transactions on Robotics}
+  \infocard[orange][24mm]{Background}{%
+    \li Obstacles can be detected, and whether they can be crossed can be judged
+    \li Friction and compliance are hard to predict from appearance
+    \li Physical properties are known only by walking the terrain}
+  \vspace{0.35em}
+  \infocard[green][18mm]{Aim}{%
+    \li Autonomous quadruped navigation outdoors that accounts for traversability, by reinforcement learning}
+
+  \takeaway{From walking experience, choose actions that stay on easy ground.}
+\end{frame}
+
+\begin{frame}{Contributions}
+  \source{Zhang et al., IEEE Transactions on Robotics}
+  \infocard[blue][13mm]{Contribution 1}{%
+    \li Traversability from self-experience, with uncertainty}
+  \vspace{0.28em}
+  \infocard[green][13mm]{Contribution 2}{%
+    \li Navigation that avoids terrain, using RGB-D together}
+  \vspace{0.28em}
+  \infocard[orange][13mm]{Contribution 3}{%
+    \li Sample-efficient learning on the real robot, by an online and offline pipeline}
+
+  \takeaway{Traversability is evaluated from self-experience and uncertainty.}
+\end{frame}
+
+\begin{frame}{Problem setting}
+  \source{Zhang et al., IEEE Transactions on Robotics}
+  \infocard[blue][12mm]{1. Reach the goal}{\li Arrive in minimum time}
+  \vspace{0.28em}
+  \infocard[orange][12mm]{2. Avoid obstacles}{\li Avoid dynamic and static obstacles}
+  \vspace{0.28em}
+  \infocard[green][12mm]{3. Traversal cost}{\li From its own experience, choose easy ground}
+
+  \takeaway{The aim is to arrive, to avoid, and to stay on easy ground, all at once.}
+\end{frame}
+
+\begin{frame}{Proposed method | Architecture}
+  \source{Zhang et al., IEEE Transactions on Robotics}
+  \vspace*{-\topskip}
+  \infocard[blue][16mm]{Architecture}{%
+    \li A local planner $\pi^{p}_{\mathrm{rgbd}}$ that takes RGB-D and the goal
+    \li A blind locomotion planner $\pi^{c}$
+    \li A Traversability Estimator that predicts the traversability cost used as the training reward}
+
+  \vspace{0.2em}
+  \centering
+  \begin{tikzpicture}[
+      scale=0.78, transform shape,
+      font=\scriptsize,
+      inp/.style={kwblue, minimum width=20mm, minimum height=7.2mm, inner sep=1.6pt},
+      mid/.style={kwblue, align=center, inner sep=2pt}
+    ]
+    \node[inp] (rgb) at (0,1.05) {RGB};
+    \node[inp] (dep) at (0,0) {Depth};
+    \node[inp] (goal) at (0,-1.05) {Goal};
+    \node[mid, minimum width=24mm, minimum height=26mm, text width=22mm] (p) at (3.15,0)
+      {Local planner\\$\pi^{p}_{\mathrm{rgbd}}$};
+    \node[mid, minimum width=24mm, minimum height=9mm, text width=22mm] (walk) at (6.55,0.62)
+      {Locomotion\\$\pi^{c}$};
+    \node[kwgreen, align=center, minimum width=26mm, minimum height=9mm, text width=24mm, inner sep=2pt] (est) at (6.55,-0.72)
+      {Traversability\\Estimator};
+    \node[mid, minimum width=18mm, minimum height=26mm, text width=16mm] (rob) at (9.55,0) {Robot};
+    \node[kwgreen, align=center, minimum width=46mm, minimum height=7mm, inner sep=2pt] (buf) at (4.7,-2.45)
+      {Replay buffer: $o^{p},a^{p},r^{p}$};
+    \draw[kwarr] (rgb.east) -- (rgb.east -| p.west);
+    \draw[kwarr] (dep.east) -- (p.west);
+    \draw[kwarr] (goal.east) -- (goal.east -| p.west);
+    \draw[kwarr] (p.east |- walk.west) -- (walk.west);
+    \draw[kwarr] (p.east |- est.west) -- (est.west);
+    \draw[kwarr] (walk.east) -- (walk.east -| rob.west);
+    \draw[kwarr] (rob.west |- est.east) -- (est.east);
+    \coordinate (bus) at ($(buf.north)+(0,3.2mm)$);
+    \draw[cgreentt] (goal.south) -- (goal.south |- bus);
+    \draw[cgreentt] (p.south) -- (p.south |- bus);
+    \draw[cgreentt] (est.south) -- (est.south |- bus);
+    \draw[cgreentt] (goal.south |- bus) -- (est.south |- bus);
+    \draw[kwarr, cgreentt] (buf.north |- bus) -- (buf.north);
+  \end{tikzpicture}
+
+  \takeaway{The training reward includes the traversability cost.}
+\end{frame}
+
+\begin{frame}{Proposed method | Four stages}
+  \source{Zhang et al., IEEE Transactions on Robotics}
+  \centering
+  \includegraphics[width=\textwidth,height=52mm,keepaspectratio]{stages.png}
+
+  \takeaway{Order: locomotion, Traversability Estimator, depth planner, real-world collection, online learning.}
+\end{frame}
+
+\begin{frame}{Stage 1 | Locomotion and traversability $T$ (Contribution 1)}
+  \source{Zhang et al., IEEE Transactions on Robotics}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.44\textwidth}
+      \infocard[blue]{Locomotion $\pi^{c}$}{%
+        \li Train with PPO to track the target velocity}
+      \vspace{0.35em}
+      \infocard[green]{Estimator $T$}{%
+        \li Use the critic value $V$
+        \lii Easier ground has higher value
+        \li The cost is the gap between flat ground and the current terrain
+        \lii This ignores differences in the command
+        \li When the variance of $V_{\mathrm{terrain}}$ is large, use the tracking error $T_{\mathrm{track}}$ as the cost}
+    \end{column}
+    \hfill
+    \begin{column}{0.54\textwidth}
+      \centering
+      \includegraphics[width=\linewidth,height=26mm,keepaspectratio]{stage1.png}\\[0.35em]
+      \includegraphics[width=\linewidth,height=24mm,keepaspectratio]{eq1.png}
+    \end{column}
+  \end{columns}
+
+  \takeaway{Easier ground, closer to flat, has higher value. Large variance falls back to the tracking cost.}
+\end{frame}
+
+\begin{frame}{Stage 2 | Depth-only planner}
+  \source{Zhang et al., IEEE Transactions on Robotics}
+  \vspace*{-0.8\baselineskip}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.42\textwidth}
+      \infocard[plain]{Input}{%
+        \li Depth
+        \li Goal}
+      \vspace{0.32em}
+      \infocard[blue]{Output}{\li Change in velocity}
+      \vspace{0.32em}
+      \infocard[green]{Training}{%
+        \li Train in simulation
+        \li 2a: inner product of the goal direction and the velocity
+        \li 2b: forward speed, because the rear is not visible
+        \li 2c: collision penalty}
+    \end{column}
+    \hfill
+    \begin{column}{0.55\textwidth}
+      \centering
+      \includegraphics[width=\linewidth,height=22mm,keepaspectratio]{stage2.png}\\[0.3em]
+      \includegraphics[width=\linewidth,height=20mm,keepaspectratio]{eq2.png}
+    \end{column}
+  \end{columns}
+
+  \takeaway{Before the real world, a depth planner learns the goal and the obstacles from depth alone.}
+\end{frame}
+
+\begin{frame}{Stage 3 | Collect real-world data}
+  \source{Zhang et al., IEEE Transactions on Robotics}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.46\textwidth}
+      \infocard[orange][18mm]{Method}{%
+        \li Walk with the Stage 2 depth planner
+        \li A person commands the velocity}
+      \vspace{0.12em}
+      \infocard[green][30mm]{Data collected}{%
+        \li State $o^{p}_{\mathrm{rgbd}}$
+        \lii RGB features, depth features
+        \lii Robot state, command toward the goal
+        \li Action $a^{p}$: change in velocity
+        \li Reward: a reward that includes the traversability cost}
+    \end{column}
+    \hfill
+    \begin{column}{0.51\textwidth}
+      \centering
+      \includegraphics[width=\linewidth,height=32mm,keepaspectratio]{stage3.png}\\[0.1em]
+      \includegraphics[width=\linewidth,height=12mm,keepaspectratio]{eq3.png}
+    \end{column}
+  \end{columns}
+
+  \takeaway{Collect state, action, and reward for training the local planner.}
+\end{frame}
+
+\begin{frame}{Stage 4 | Online learning (Contributions 2 and 3)}
+  \source{Zhang et al., IEEE Transactions on Robotics}
+  \vspace*{-0.4\baselineskip}
+  {\footnotesize\color{body} While walking, train a planner that also uses RGB.}
+  \vspace{0.1em}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.50\textwidth}
+      \infocard[blue][15mm]{Soft Actor Critic}{%
+        \li Also use past data
+        \li Randomize actions, so one route is not repeated}
+      \vspace{0.12em}
+      \infocard[orange][15mm]{DroQ}{%
+        \li Dropout inside the Q network
+        \li Limit overestimation on little data}
+      \vspace{0.12em}
+      \infocard[green][15mm]{RLPD}{%
+        \li Manage the training batch
+        \li Half offline data, half online data}
+    \end{column}
+    \hfill
+    \begin{column}{0.50\textwidth}
+      \centering
+      \includegraphics[width=\linewidth,height=46mm,keepaspectratio]{stage4.png}
+    \end{column}
+  \end{columns}
+
+  \takeaway{Offline data and randomized actions train efficiently from little data.}
+\end{frame}
+
+\begin{frame}{Results | Traversability cost (Contribution 1)}
+  \source{Zhang et al., IEEE Transactions on Robotics}
+  {\footnotesize\color{body} Replace the training traversability cost $T$ with one of the following.}
+
+  \vspace{0.35em}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.32\textwidth}
+      \infocard[red][12mm]{Ours}{\li Use the critic value $V$}
+    \end{column}
+    \hfill
+    \begin{column}{0.32\textwidth}
+      \infocard[blue][12mm]{Tracking}{\li Velocity-tracking error}
+    \end{column}
+    \hfill
+    \begin{column}{0.32\textwidth}
+      \infocard[orange][12mm]{SysID}{\li Friction from a friction estimator}
+    \end{column}
+  \end{columns}
+
+  \vspace{0.3em}
+  \centering
+  \includegraphics[width=0.86\textwidth,height=32mm,keepaspectratio]{bars_cost.png}
+
+  \takeaway{Ours walks at the lowest cost.}
+\end{frame}
+
+\begin{frame}{Results | Why vision matters (Contribution 2)}
+  \source{Zhang et al., IEEE Transactions on Robotics}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.32\textwidth}
+      \infocard[red][14mm]{Ours}{\li Good on every metric}
+    \end{column}
+    \hfill
+    \begin{column}{0.32\textwidth}
+      \infocard[blue][14mm]{RGB only}{\li Many collisions}
+    \end{column}
+    \begin{column}{0.32\textwidth}
+      \infocard[orange][14mm]{Depth only}{\li High traversability cost}
+    \end{column}
+    \hfill
+  \end{columns}
+
+  \vspace{0.35em}
+  \centering
+  \includegraphics[width=0.78\textwidth,height=34mm,keepaspectratio]{bars_vision.png}
+
+  \takeaway{Depth alone costs more, and RGB alone collides more, so both are needed.}
+\end{frame}
+
+\begin{frame}{Results | Online and offline learning (Contribution 3)}
+  \source{Zhang et al., IEEE Transactions on Robotics}
+  \vspace{0.1em}
+  \centering
+  {\scriptsize
+  \begin{tabular}{lcc}
+    \toprule
+    & Offline (past examples) & Online (exploration) \\
+    \midrule
+    \textbf{Ours (RLPD)} & ordinary data 50\% & ordinary data 50\% \\
+    Behavior Cloning & imitation data & none \\
+    Vanilla SAC & none & ordinary data \\
+    SAC with BCL & imitation data & ordinary data \\
+    \bottomrule
+  \end{tabular}
+  }
+
+  \vspace{0.25em}
+  \centering
+  \includegraphics[width=0.78\textwidth,height=32mm,keepaspectratio]{bars_rlpd.png}
+
+  \takeaway{Ours learns efficiently from little data and reaches high performance.}
+\end{frame}
+
+\begin{frame}{Results | Real-robot evaluation}
+  \source{Zhang et al., IEEE Transactions on Robotics}
+  \centering
+  \includegraphics[width=\textwidth,height=54mm,keepaspectratio]{real_cost.png}
+
+  \takeaway{On easy ground, the traversability cost goes down.}
+\end{frame}
+
+\begin{frame}{Results | Real-robot navigation}
+  \source{Zhang et al., IEEE Transactions on Robotics}
+  \centering
+  \includegraphics[width=\textwidth,height=54mm,keepaspectratio]{nav_real.png}
+
+  \takeaway{It avoided hard ground and walked to the goal.}
+\end{frame}
+
+\begin{frame}{Summary | Traversability-Aware}
+  \source{Zhang et al., IEEE Transactions on Robotics}
+  \infocard[green][18mm]{Contributions}{%
+    \li Traversability from self-experience, with uncertainty
+    \li Terrain-avoiding navigation that integrates RGB-D
+    \li Online and offline learning on the real robot}
+  \vspace{0.35em}
+  \infocard[orange][18mm]{Limitations}{%
+    \li Adaptation to large height changes, such as stairs}
+
+  \takeaway{Traversability enters the reward. Large height changes are still difficult.}
+\end{frame}
+
+\begin{frame}{Summary | The two surveys}
+  \cardbalance
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.49\textwidth}
+      \infocard[green][48mm]{Where Should I Walk?}{%
+        \li Tie foot contact force to images and predict walking cost
+        \li Fill sparse labels with Mean Teacher
+        \li Choose the path by Dijkstra on the cost map
+        \li Pass walkability to the planner as a map}
+    \end{column}
+    \hfill
+    \begin{column}{0.49\textwidth}
+      \infocard[blue][48mm]{Traversability-Aware}{%
+        \li Evaluate traversability from self-experience and uncertainty
+        \li A local planner that outputs velocity directly from RGB-D
+        \li Combine offline and online learning on the real robot
+        \li Pass walkability to the action as a reward}
+    \end{column}
+  \end{columns}
+  \takeawaybalance{The first paper puts preference in a map. The second puts it in navigation.}
+\end{frame}
+
+\end{document}

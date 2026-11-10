@@ -1,0 +1,774 @@
+% survey_0261002 の修正版．元の survey_0261002.tex は残してある．
+% コンパイル（slide/20261007/ で実行。PDFは slide/out/20261007/ 、他は build/）:
+%   ../lualatex-dated.sh -synctex=1 -interaction=nonstopmode -file-line-error -output-directory=out survey_kawamotostyle_20261007_handout.tex
+\documentclass[aspectratio=169,10pt,t,handout]{beamer}
+\usepackage[ja]{labslide}
+\usetikzlibrary{fit,backgrounds,calc}
+
+% 題名を，ページ上端と下の横棒のあいだの中央に置く．
+\makeatletter
+\setlength{\beamer@frametopskip}{0mm}
+\makeatother
+\setbeamertemplate{frametitle}{%
+  \vspace{4.2mm}%
+  {\usebeamerfont{frametitle}\color{ink}\insertframetitle\par}%
+  \vspace{0.4mm}%
+  {\color{ruleblue}\rule{\textwidth}{0.7pt}\par}%
+  \vspace{1.1mm}%
+  \ifx\insertframesubtitle\@empty\else
+    {\footnotesize\color{muted}\insertframesubtitle\par}%
+    \vspace{1.2mm}%
+  \fi
+}
+
+\definecolor{cviolet}{HTML}{F3E8F6}
+\definecolor{cviolettt}{HTML}{7A458E}
+\renewcommand{\usecardcolor}[1]{%
+  \def\cardfill{cgreen}%
+  \def\cardtitlec{cgreentt}%
+  \ifstrequal{#1}{red}{%
+    \def\cardfill{corange}%
+    \def\cardtitlec{corangett}%
+  }{}%
+  \ifstrequal{#1}{orange}{%
+    \def\cardfill{corange}%
+    \def\cardtitlec{corangett}%
+  }{}%
+  \ifstrequal{#1}{blue}{%
+    \def\cardfill{cblue}%
+    \def\cardtitlec{cbluett}%
+  }{}%
+  \ifstrequal{#1}{green}{%
+    \def\cardfill{cgreen}%
+    \def\cardtitlec{cgreentt}%
+  }{}%
+  \ifstrequal{#1}{violet}{%
+    \def\cardfill{cviolet}%
+    \def\cardtitlec{cviolettt}%
+  }{}%
+  \ifstrequal{#1}{plain}{%
+    \def\cardfill{cplain}%
+    \def\cardtitlec{cplaintt}%
+  }{}%
+  \ifstrequal{#1}{gray}{%
+    \def\cardfill{cplain}%
+    \def\cardtitlec{cplaintt}%
+  }{}%
+}
+
+\graphicspath{{fig/survey/}}
+
+\kicker{サーベイ}
+\title{安全保障と好み選択を\\両立できる局所プランナ}
+\subtitle{目標速度を決めるところに，両方を載せる}
+\date{2026年10月}
+
+% カード内の箇条書き．同じ段のカードは第2オプションで高さをそろえる．
+\newcommand{\li}{%
+  \ifvmode\else\par\fi
+  \noindent\hangindent=1.15em\hangafter=1
+  \makebox[1.15em][l]{\textcolor{ruleblue}{\textbullet}}\ignorespaces}
+\newcommand{\lii}{%
+  \ifvmode\else\par\fi
+  \noindent\hspace{1.0em}\hangindent=2.15em\hangafter=1
+  \makebox[1.05em][l]{\textcolor{muted}{\textendash}}\ignorespaces}
+
+\RenewDocumentCommand{\infocard}{O{green} o m m}{%
+  \usecardcolor{#1}%
+  \IfValueTF{#2}{\def\cardminh{#2}}{\def\cardminh{0pt}}%
+  \begin{tikzpicture}[baseline=(card.north)]
+    \node[
+      anchor=north west,
+      fill=\cardfill,
+      text width=\dimexpr\linewidth-14pt\relax,
+      minimum height=\cardminh,
+      inner xsep=6.5pt,
+      inner ysep=4pt,
+      align=flush left
+    ] (card) {%
+      {\color{\cardtitlec}\bfseries #3}\par\vspace{0.15em}%
+      {\color{body}\footnotesize #4\par}%
+    };
+  \end{tikzpicture}%
+}
+
+\begin{document}
+
+\begin{frame}[plain]
+  \labtitlepage{%
+    \agendacard[blue][18mm]{研究テーマ}{座標を速度にし，速度をトルクにする．}%
+    \hfill
+    \agendacard[orange][18mm]{好み選択}{画像から歩行コストを予測する．}%
+    \hfill
+    \agendacard[green][18mm]{走行可能性}{RGB と深度から速度を直接出す．}%
+  }
+\end{frame}
+
+\begin{frame}{研究テーマ ｜ ロボットの制御系}
+  \centering
+  \begin{tikzpicture}[node distance=6.5mm]
+    \node[kworange, text width=24mm, minimum height=8mm] (c) {コントローラ};
+    \node[kwgreen, text width=24mm, minimum height=8mm, right=of c] (p) {局所プランナ};
+    \node[kwblue, text width=24mm, minimum height=8mm, right=of p] (g) {歩行モデル};
+    \node[kwpurple, text width=24mm, minimum height=8mm, right=of g] (m) {モータ};
+    \draw[kwarr] (c) -- (p)
+      node[midway, below=4mm, font=\scriptsize, text=muted] {目標座標};
+    \draw[kwarr] (p) -- (g)
+      node[midway, below=4mm, font=\scriptsize, text=muted] {目標速度};
+    \draw[kwarr] (g) -- (m)
+      node[midway, below=4mm, font=\scriptsize, text=muted] {トルク};
+  \end{tikzpicture}
+
+  \vspace{1.5em}
+  \includegraphics[width=\textwidth,height=35mm,keepaspectratio]{img001.png}
+
+  \takeaway{一般的に、入力は3つの変換を経てモータに届く}
+\end{frame}
+
+\begin{frame}{研究テーマ ｜ 局所プランナ}
+  \centering
+  \begin{tikzpicture}[node distance=6.5mm]
+    \node[kworange, text width=24mm, minimum height=8mm, opacity=0.2] (c) {コントローラ};
+    \node[kwgreen, text width=24mm, minimum height=8mm, right=of c] (p) {局所プランナ};
+    \node[kwblue, text width=24mm, minimum height=8mm, right=of p] (g) {歩行モデル};
+    \node[kwpurple, text width=24mm, minimum height=8mm, right=of g, opacity=0.2] (m) {モータ};
+    \draw[kwarr] (c) -- (p)
+      node[midway, below=4mm, font=\scriptsize, text=muted] {目標座標};
+    \draw[kwarr] (p) -- (g)
+      node[midway, below=4mm, font=\scriptsize, text=muted] {目標速度};
+    \draw[kwarr] (g) -- (m)
+      node[midway, below=4mm, font=\scriptsize, text=muted] {トルク};
+  \end{tikzpicture}
+
+  % img2
+  \includegraphics[width=\textwidth,height=35mm,keepaspectratio]{img002.png}
+
+  \takeaway{目標速度を、「安全保障」と「好み選択」の両方に対応させる局所プランナの研究を行う}
+\end{frame}
+
+\begin{frame}{好み選択に関する論文}
+  \infocard[green][22mm]{歩行コストマップからのナビゲーション}{%
+    \li Where Should I Walk? Predicting Terrain Properties From Images Via Self-Supervised Learning
+    \li IEEE RA-L，2019
+    \li Cited by 268}
+  \vspace{0.4em}
+  \infocard[blue][22mm]{RGBDと強化学習を使ったナビゲーション}{%
+    \li Traversability-Aware Legged Navigation by Learning from Real-World Visual Data
+    \li IEEE Transactions on Robotics
+    \li Cited by 13}
+
+  \takeaway{1本目は好みをマップで表現、2本目は好みをナビゲーションで表現する}
+\end{frame}
+
+% ---------- Wellhausen ----------
+
+\begin{frame}{Where Should I Walk?}
+  \source{Wellhausen et al., IEEE RA-L, 2019．Cited by 268}
+  \centering
+  \includegraphics[width=\textwidth,height=52mm,keepaspectratio]{wsiw_row.png}
+
+  \takeaway{入力 RGB からコストマップを出し，ダイクストラで経路を引く．}
+\end{frame}
+
+\begin{frame}{背景・目的}
+  \source{Wellhausen et al., IEEE RA-L, 2019}
+  \infocard[orange][24mm]{背景}{%
+    \li 自然環境の移動は，剛体だけとは限らない
+    \li 平坦でも，水・砂・土は水分量で困難さが変わる
+    \lii 人が定義した同一クラスでも，特性はばらつく
+    \lii 人手のアノテーションは非常に困難，または不可能}
+  \vspace{0.35em}
+  \infocard[green][24mm]{目的}{%
+    \li RGB 画像と，足の感覚（物理特性）を紐づける
+    \li RGB 画像から，歩行コストを予測する}
+
+  \takeaway{足の感覚と画像を結び，画像から歩行コストを予測する．}
+\end{frame}
+
+\begin{frame}{貢献}
+  \source{Wellhausen et al., IEEE RA-L, 2019}
+  \infocard[blue][12mm]{1}{\li カメラ画像と，足の接地力を結びつける}
+  \vspace{0.28em}
+  \infocard[orange][12mm]{2}{\li 歩きながら地面特性を予測する．指標は地面反力スコア}
+  \vspace{0.28em}
+  \infocard[green][12mm]{3}{\li 疎かつスパースなラベルで学習する CNN}
+  \vspace{0.28em}
+  \infocard[violet][12mm]{4}{\li 直観的なナビゲーションが実現できた}
+
+  \takeaway{足場のラベルから地面反力スコアを学び，そのコストで経路を決める．}
+\end{frame}
+
+\begin{frame}{提案手法}
+  \source{Wellhausen et al., IEEE RA-L, 2019}
+  \centering
+  \begin{tikzpicture}[
+      scale=0.88, transform shape,
+      font=\footnotesize,
+      box/.style={kwblue, text width=30mm, minimum height=12mm, inner sep=2.5pt},
+      tag/.style={font=\scriptsize\bfseries, text=muted}
+    ]
+    \node[box] (lab) at (0,0) {足場ラベリング};
+    \node[box] (weak) at (4.15,1.15) {弱教師ラベル\\{\scriptsize (Segmentation)}};
+    \node[box] (self) at (4.15,-1.15) {自己教師ラベル\\{\scriptsize (Ground Reaction Score)}};
+    \node[box] (cls) at (8.35,1.15) {足場種類推定器};
+    \node[box] (cost) at (8.35,-1.15) {歩行コストマップ};
+    \node[box] (corr) at (12.5,1.15) {結果の相関確認用};
+    \node[box] (nav) at (12.5,-1.15) {ナビゲーション\\{\scriptsize (ダイクストラ)}};
+    \begin{scope}[on background layer]
+      \node[fill=cblue, rounded corners=1.6pt, inner sep=2.2mm, fit=(lab)] (p1) {};
+      \node[fill=corange, rounded corners=1.6pt, inner sep=2.2mm, fit=(weak)(self)] (p2) {};
+      \node[fill=cgreen, rounded corners=1.6pt, inner sep=2.6mm, fit=(cls)(cost)] (p3) {};
+      \node[fill=cviolet, rounded corners=1.6pt, inner sep=2.2mm, fit=(nav)] (p4) {};
+    \end{scope}
+    \node[tag, text=cbluett, anchor=south] at (p1.north) {貢献 1};
+    \node[tag, text=corangett, anchor=south] at (p2.north) {貢献 2};
+    \node[tag, text=cgreentt, anchor=south] at (p3.north) {貢献 3};
+    \node[tag] at ($(p3.north)+(0,-4.6mm)$) {Mean Teacher};
+    \node[tag, text=cviolettt, anchor=south] at (p4.north) {貢献 4};
+    \draw[kwarr] (lab.east) -- (weak.west);
+    \draw[kwarr] (lab.east) -- (self.west);
+    \draw[kwarr] (weak) -- (cls);
+    \draw[kwarr] (self) -- (cost);
+    \draw[kwarr] (cls) -- (corr);
+    \draw[kwarr] (cost) -- (nav);
+  \end{tikzpicture}
+
+  \takeaway{弱教師は種類の確認に使い，経路に使うのは自己教師の歩行コストである．}
+\end{frame}
+
+\begin{frame}{貢献 1 ｜ 足場ラベリング}
+  \source{Wellhausen et al., IEEE RA-L, 2019}
+  \centering
+  \includegraphics[width=\textwidth,height=52mm,keepaspectratio]{foothold.png}
+
+  \takeaway{接地点 3 点を，各時刻の画像座標へ落とす．}
+\end{frame}
+
+\begin{frame}{弱教師学習のラベリング}
+  \source{Wellhausen et al., IEEE RA-L, 2019}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.40\textwidth}
+      \infocard[orange][42mm]{人が動画を見る}{%
+        \li 歩いている区間をラベル付けする
+        \lii Asphalt，Path，Grass，Dirt，Sand
+        \li その 1 コマの足場にラベルが付く
+        \li 画像上の画素にも，同じラベルが付く}
+    \end{column}
+    \hfill
+    \begin{column}{0.57\textwidth}
+      \centering
+      \includegraphics[width=\linewidth,height=48mm,keepaspectratio]{class_dots.png}\\[0.15em]
+      {\scriptsize\color{muted} Grass，Path，Sand}
+    \end{column}
+  \end{columns}
+
+  \takeaway{人が付けた区間ラベルが，その瞬間の足場の画素まで降りている．}
+\end{frame}
+
+\begin{frame}{貢献 2 ｜ 自己教師の地面反力スコア}
+  \source{Wellhausen et al., IEEE RA-L, 2019}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.36\textwidth}
+      {\footnotesize\color{body} ある点の Ground Reaction Score を定義する．}
+      \vspace{0.35em}
+      \infocard[blue][13mm]{1}{\li 接地中のトルクセンサの時系列}
+      \vspace{0.28em}
+      \infocard[orange][13mm]{2}{\li ウェーブレット変換で 13860 次元}
+      \vspace{0.28em}
+      \infocard[green][13mm]{3}{\li PCA の第 1 主成分を GRS とする}
+    \end{column}
+    \hfill
+    \begin{column}{0.61\textwidth}
+      \centering
+      \includegraphics[width=\linewidth,height=48mm,keepaspectratio]{grs_dots.png}
+    \end{column}
+  \end{columns}
+
+  \takeaway{素材によって，Ground Reaction Score は変わる．}
+\end{frame}
+
+\begin{frame}{貢献 2 ｜ ラベルが疎なので Mean Teacher を使う}
+  \source{Wellhausen et al., IEEE RA-L, 2019}
+  \vspace*{-0.4mm}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.46\textwidth}
+      \infocard[orange][22mm]{学習するには疎すぎる}{%
+        \li 足元が多い．画像上部のデータが少ない
+        \li 最大で 10\% しかラベルがない}
+      \vspace{0.18em}
+      \infocard[blue][22mm]{Mean Teacher}{%
+        \li 同じ画像に，異なるデータ拡張
+        \li それぞれを異なるモデルへ入力する
+        \li 同じ画像なので，二つの出力は一致するべき}
+    \end{column}
+    \hfill
+    \begin{column}{0.51\textwidth}
+      \centering
+      \includegraphics[width=\linewidth,height=50mm,keepaspectratio]{sparse.png}
+    \end{column}
+  \end{columns}
+
+  \takeaway{足場の点だけでは疎なので，拡張した二つの出力を揃えて学ぶ．}
+\end{frame}
+
+\begin{frame}{Mean Teacher}
+  \source{Wellhausen et al., IEEE RA-L, 2019}
+  \centering
+  \begin{tikzpicture}[scale=0.66, transform shape, box/.style={minimum height=11mm, text width=26mm}]
+    \node[kw, draw=cplaintt, fill=cplain, box] (img) at (0,0) {Image};
+    \node[kworange, box] (s) at (5.8,1.85) {Student Model};
+    \node[kwgreen, box] (t) at (5.8,-1.85) {Teacher Model};
+    \node[kwblue, box] (loss) at (10.6,0) {差分\\[0.1em]{\scriptsize LOSS}};
+    \draw[kwarr] (img.east) -- (s.west)
+      node[pos=0.42, above=1.6mm, font=\scriptsize, text=muted] {Augmentation A};
+    \draw[kwarr] (img.east) -- (t.west)
+      node[pos=0.42, below=1.6mm, font=\scriptsize, text=muted] {Augmentation B};
+    \draw[kwarr] (s.east) -- (loss.north west);
+    \draw[kwarr] (t.east) -- (loss.south west);
+    \draw[kwarr, cgreentt] (s.south) -- (t.north)
+      node[midway, right=1.6mm, font=\scriptsize, text=cgreentt] {EMA};
+  \end{tikzpicture}
+
+  \vspace{0.3em}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.32\textwidth}
+      \infocard[blue][18mm]{拡張}{\li 同じ画像に異なるデータ拡張を施して，二つのモデルに入力する}
+    \end{column}
+    \hfill
+    \begin{column}{0.32\textwidth}
+      \infocard[orange][18mm]{Student}{\li 同じ画像なので Teacher の出力と一致すべき．差分を LOSS とする}
+    \end{column}
+    \hfill
+    \begin{column}{0.32\textwidth}
+      \infocard[green][18mm]{Teacher}{\li Student の重みを，移動平均をとりながら更新する}
+    \end{column}
+  \end{columns}
+
+  \takeaway{ラベルの無い画素も，二つの出力が揃うように学ぶ．}
+\end{frame}
+
+\begin{frame}{結果 ｜ 弱教師のクラス分類}
+  \source{Wellhausen et al., IEEE RA-L, 2019, Table~I}
+  \vspace{0.2em}
+  \centering
+  {\footnotesize
+  \begin{tabular}{lcccccc}
+    \toprule
+    & asphalt & path & grass & dirt & sand & Mean \\
+    \midrule
+    精度 & 93.1\% & 97.0\% & 97.3\% & 85.2\% & 80.3\% & \textbf{90.6\%} \\
+    \bottomrule
+  \end{tabular}
+  }
+
+  \vspace{0.8em}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.48\textwidth}
+      \infocard[green][16mm]{全体}{\li 全体平均で 90.6\%}
+    \end{column}
+    \hfill
+    \begin{column}{0.48\textwidth}
+      \infocard[orange][16mm]{dirt と sand}{\li サンプル数が少なく，精度が低いのではないか}
+    \end{column}
+  \end{columns}
+
+  \takeaway{平均は 90.6\%．低いのは dirt と sand である．}
+\end{frame}
+
+\begin{frame}{結果 ｜ 自己教師の回帰}
+  \source{Wellhausen et al., IEEE RA-L, 2019}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.52\textwidth}
+      \centering
+      \includegraphics[width=\linewidth,height=42mm,keepaspectratio]{pca.png}
+    \end{column}
+    \hfill
+    \begin{column}{0.45\textwidth}
+      \infocard[green][22mm]{素材ごとに分かれる}{%
+        \li 第 1 主成分の特徴が，地面の素材ごとに違う}
+      \vspace{0.4em}
+      \infocard[orange][22mm]{固いほど分散が大きい}{%
+        \li 接地した瞬間の振動を，吸収しきれないからではないか}
+    \end{column}
+  \end{columns}
+
+  \takeaway{第 1 主成分は素材ごとに分かれ，固い素材ほど分散が大きい．}
+\end{frame}
+
+\begin{frame}{結果 ｜ クラスと地面反力スコア}
+  \source{Wellhausen et al., IEEE RA-L, 2019}
+  \centering
+  \includegraphics[width=\textwidth,height=52mm,keepaspectratio]{pred_grid.png}
+
+  \takeaway{同じ入力から，クラスと地面反力スコアを予測する．}
+\end{frame}
+
+\begin{frame}{貢献 3 ｜ ナビゲータ}
+  \source{Wellhausen et al., IEEE RA-L, 2019}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.38\textwidth}
+      \infocard[green][40mm]{実験設定}{%
+        \li Jetson TX2 で 6\,Hz
+        \li 10\,cm の 2D グリッドに地面反力スコアを予測
+        \li 常に 10\,m 前方へ進むよう指示する
+        \li ダイクストラ法で経路を計算する}
+    \end{column}
+    \hfill
+    \begin{column}{0.59\textwidth}
+      \centering
+      \includegraphics[width=\linewidth,height=52mm,keepaspectratio]{navpath.png}
+    \end{column}
+  \end{columns}
+
+  \takeaway{予測した地面反力スコアの上で，ダイクストラ法により経路を決める．}
+\end{frame}
+
+\begin{frame}{まとめ ｜ Where Should I Walk?}
+  \source{Wellhausen et al., IEEE RA-L, 2019}
+  \infocard[green][15mm]{貢献}{%
+    \setlength{\baselineskip}{8.2pt}%
+    \li カメラ画像と足の接地力を結びつける
+    \li 歩きながら地面特性を予測する
+    \lii 地面反力スコア
+    \li 疎かつスパースなラベルで学習する CNN
+    \li 直観的なナビゲーション}
+  \vspace{0.08em}
+  \infocard[orange][15mm]{課題}{%
+    \setlength{\baselineskip}{8.2pt}%
+    \li 動的環境に弱い
+    \lii 少し先の地面を見ている
+    \lii 動く障害物の検知には向いていない}
+  \vspace{0.08em}
+  \infocard[blue][15mm]{展望}{%
+    \setlength{\baselineskip}{8.2pt}%
+    \li 歩行コストを歩行器へ載せる
+    \lii 今回載せたのは経路計画
+    \lii 歩幅や足の上げ幅にも使えるかもしれない}
+
+  \takeaway{歩行コストは経路計画に載った．歩行器へ載せる余地が残る．}
+\end{frame}
+
+% ---------- Zhang et al. ----------
+
+\begin{frame}{Traversability-Aware Legged Navigation}
+  \source{Zhang et al., IEEE Transactions on Robotics．Cited by 13}
+  \begin{itemize}
+    \item RGB と Depth から，歩きやすい道を通るプランを直接出す
+  \end{itemize}
+
+  \vspace{0.25em}
+  \centering
+  \includegraphics[width=\textwidth,height=48mm,keepaspectratio]{trav_teaser.png}
+
+  \takeaway{局所プランナは，RGB と Depth から速度を出す．}
+\end{frame}
+
+\begin{frame}{背景・目的}
+  \source{Zhang et al., IEEE Transactions on Robotics}
+  \infocard[orange][18mm]{背景}{%
+    \li 障害物を検知し，通れるかは判断できる
+    \li 見た目から摩擦や弾性を予測するのは難しい
+    \li 物理特性は，その地形を歩いてみないと分からない}
+  \vspace{0.35em}
+  \infocard[green][18mm]{目的}{%
+    \li 野外で，走行可能性を考慮した四足歩行の自立ナビゲーションを，強化学習で実現する}
+
+  \takeaway{歩いた経験から，歩きやすい道を選ぶ．}
+\end{frame}
+
+\begin{frame}{貢献}
+  \source{Zhang et al., IEEE Transactions on Robotics}
+  \infocard[blue][13mm]{貢献 1}{%
+    \li 不確実性を考慮した「事故経験に基づく走破性評価」}
+  \vspace{0.28em}
+  \infocard[green][13mm]{貢献 2}{%
+    \li RGB-D を統合した，地形を避けるナビゲーション}
+  \vspace{0.28em}
+  \infocard[orange][13mm]{貢献 3}{%
+    \li 実機での，オンオフライン学習のパイプライン}
+
+  \takeaway{走破性は，事故経験と不確実性から評価する．}
+\end{frame}
+
+\begin{frame}{問題設定}
+  \source{Zhang et al., IEEE Transactions on Robotics}
+  \infocard[blue][12mm]{1．目標到達}{\li 最小時間でゴールへ着く}
+  \vspace{0.28em}
+  \infocard[orange][12mm]{2．障害物回避}{\li 動的・静的な障害物を避ける}
+  \vspace{0.28em}
+  \infocard[green][12mm]{3．走行コスト}{\li 自身の経験から，歩きやすい道を選ぶ}
+
+  \takeaway{着くこと，避けること，歩きやすいことの三つを同時に満たす．}
+\end{frame}
+
+\begin{frame}{提案手法 ｜ 構成}
+  \source{Zhang et al., IEEE Transactions on Robotics}
+  \infocard[blue][16mm]{構成}{%
+    \li RGBD と目的地を入力する局所プランナ $\pi^{p}_{\mathrm{rgbd}}$
+    \li 盲目の歩行プランナ $\pi^{c}$
+    \li 学習時の報酬＝走行可能性コストを予測する Traversability Estimator}
+
+  \vspace{0.2em}
+  \centering
+  \begin{tikzpicture}[
+      scale=0.78, transform shape,
+      font=\scriptsize,
+      inp/.style={kwblue, minimum width=20mm, minimum height=7.2mm, inner sep=1.6pt},
+      mid/.style={kwblue, align=center, inner sep=2pt}
+    ]
+    \node[inp] (rgb) at (0,1.05) {RGB};
+    \node[inp] (dep) at (0,0) {Depth};
+    \node[inp] (goal) at (0,-1.05) {目標地点};
+    \node[mid, minimum width=24mm, minimum height=26mm, text width=22mm] (p) at (3.15,0)
+      {局所プランナ\\$\pi^{p}_{\mathrm{rgbd}}$};
+    \node[mid, minimum width=24mm, minimum height=9mm, text width=22mm] (walk) at (6.55,0.62)
+      {歩行プランナ\\$\pi^{c}$};
+    \node[kwgreen, align=center, minimum width=26mm, minimum height=9mm, text width=24mm, inner sep=2pt] (est) at (6.55,-0.72)
+      {Traversability\\Estimator};
+    \node[mid, minimum width=18mm, minimum height=26mm, text width=16mm] (rob) at (9.55,0) {ロボット};
+    \node[kwgreen, align=center, minimum width=46mm, minimum height=7mm, inner sep=2pt] (buf) at (4.7,-2.45)
+      {学習用バッファ：$o^{p},a^{p},r^{p}$};
+    \draw[kwarr] (rgb.east) -- (rgb.east -| p.west);
+    \draw[kwarr] (dep.east) -- (p.west);
+    \draw[kwarr] (goal.east) -- (goal.east -| p.west);
+    \draw[kwarr] (p.east |- walk.west) -- (walk.west);
+    \draw[kwarr] (p.east |- est.west) -- (est.west);
+    \draw[kwarr] (walk.east) -- (walk.east -| rob.west);
+    \draw[kwarr] (rob.west |- est.east) -- (est.east);
+    \coordinate (bus) at ($(buf.north)+(0,3.2mm)$);
+    \draw[cgreentt] (p.south) -- (p.south |- bus);
+    \draw[cgreentt] (est.south) -- (est.south |- bus);
+    \draw[cgreentt] (rob.south) -- (rob.south |- bus);
+    \draw[cgreentt] (p.south |- bus) -- (rob.south |- bus);
+    \draw[kwarr, cgreentt] (bus) -- (buf.north);
+  \end{tikzpicture}
+
+  \takeaway{学習時の報酬に，走行可能性コストを入れる．}
+\end{frame}
+
+\begin{frame}{提案手法 ｜ 四つの段階}
+  \source{Zhang et al., IEEE Transactions on Robotics}
+  \centering
+  \includegraphics[width=\textwidth,height=52mm,keepaspectratio]{stages.png}
+
+  \takeaway{歩行器，深度プランナ，実世界の収集，オンライン学習の順で組む．}
+\end{frame}
+
+\begin{frame}{Stage 1 ｜ 歩行器と歩行可能性 $T$}
+  \source{Zhang et al., IEEE Transactions on Robotics}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.52\textwidth}
+      \infocard[blue][12mm]{歩行器 $\pi^{c}$}{%
+        \li 目標速度に追従するよう，PPO で学習する}
+      \vspace{0.28em}
+      \infocard[green][26mm]{Estimator $T$}{%
+        \li Critic の価値 $V$ を使う
+        \lii 歩きやすい道ほど価値が高い
+        \li 平地と今の地形の差分をコストにする
+        \lii 入力コマンドの違いを無視するため
+        \li $V_{\mathrm{terrain}}$ の分散が大きいときは，速度追従誤差をコストとみる}
+    \end{column}
+    \hfill
+    \begin{column}{0.45\textwidth}
+      \centering
+      \includegraphics[width=\linewidth,height=26mm,keepaspectratio]{stage1.png}
+    \end{column}
+  \end{columns}
+
+  \vspace{0.02em}
+  \centering
+  \includegraphics[width=\textwidth,height=14.6mm,keepaspectratio]{eq1.png}
+
+  \takeaway{歩きやすい道ほど価値が高い．その差が走行コストになる．}
+\end{frame}
+
+\begin{frame}{Stage 2 ｜ Depth のみのプランナ}
+  \source{Zhang et al., IEEE Transactions on Robotics}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.30\textwidth}
+      \infocard[plain][16mm]{入力}{%
+        \li Depth
+        \li 目的地}
+    \end{column}
+    \hfill
+    \begin{column}{0.22\textwidth}
+      \infocard[blue][16mm]{出力}{\li 速度の変化量}
+    \end{column}
+    \hfill
+    \begin{column}{0.44\textwidth}
+      \infocard[green][16mm]{学習}{%
+        \li シミュレータ上で学習する
+        \li 2a：目的地までのベクトルと移動速度の内積
+        \li 2b：前向き速度．後ろが見えないため
+        \li 2c：衝突ペナルティ}
+    \end{column}
+  \end{columns}
+
+  \vspace{0.2em}
+  \centering
+  \includegraphics[width=0.42\textwidth,height=16mm,keepaspectratio]{stage2.png}
+
+  \vspace{0.15em}
+  \centering
+  \includegraphics[width=\textwidth,height=16mm,keepaspectratio]{eq2.png}
+
+  \takeaway{実世界へ出る前に，深度だけでゴールと障害物を学ぶ．}
+\end{frame}
+
+\begin{frame}{Stage 3 ｜ 現実世界のデータを集める}
+  \source{Zhang et al., IEEE Transactions on Robotics}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.46\textwidth}
+      \infocard[orange][18mm]{方法}{%
+        \li Stage 2 の Depth プランナで歩く
+        \li 人が速度を与えて歩く}
+      \vspace{0.12em}
+      \infocard[green][34mm]{収集するデータ}{%
+        \li 状態 $o^{p}_{\mathrm{rgbd}}$
+        \lii RGB 特徴，Depth 特徴
+        \lii ロボットの状態，目標地点へのコマンド
+        \li 行動 $a^{p}$：速度の変化量
+        \li 報酬：走破性コストを考慮した報酬}
+    \end{column}
+    \hfill
+    \begin{column}{0.51\textwidth}
+      \centering
+      \includegraphics[width=\linewidth,height=32mm,keepaspectratio]{stage3.png}\\[0.1em]
+      \includegraphics[width=\linewidth,height=12mm,keepaspectratio]{eq3.png}
+    \end{column}
+  \end{columns}
+
+  \takeaway{集めるのは特徴と，速度の変化量と，走破性を入れた報酬である．}
+\end{frame}
+
+\begin{frame}{Stage 4 ｜ オンライン学習}
+  \source{Zhang et al., IEEE Transactions on Robotics}
+  {\footnotesize\color{body} 歩きながら，RGB も含むプランナを学習する．}
+  \vspace{0.15em}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.42\textwidth}
+      \infocard[blue][15mm]{Soft After Critic}{%
+        \li 過去のデータも使う
+        \li 行動をランダムにし，一つのルートにしない}
+      \vspace{0.18em}
+      \infocard[orange][15mm]{DroQ}{%
+        \li Q ネットワーク内にドロップアウト
+        \li 少ないデータでの過大評価を防ぐ}
+      \vspace{0.18em}
+      \infocard[green][15mm]{RLPD}{%
+        \li 学習に使うバッチを管理する
+        \li オフラインとオンラインを半分ずつ使う}
+    \end{column}
+    \hfill
+    \begin{column}{0.55\textwidth}
+      \centering
+      \includegraphics[width=\linewidth,height=50mm,keepaspectratio]{stage4.png}
+    \end{column}
+  \end{columns}
+
+  \takeaway{過去の見本と今の探索を，半分ずつ混ぜて学ぶ．}
+\end{frame}
+
+\begin{frame}{結果 ｜ 走破性コストの評価}
+  \source{Zhang et al., IEEE Transactions on Robotics}
+  {\footnotesize\color{body} 学習時の走破性コスト $T$ を，次のどれかに置き換える．}
+
+  \vspace{0.35em}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.32\textwidth}
+      \infocard[green][16mm]{Ours}{\li Critic の価値 $V$ を使う}
+    \end{column}
+    \hfill
+    \begin{column}{0.32\textwidth}
+      \infocard[orange][16mm]{Tracking}{\li 速度追従誤差}
+    \end{column}
+    \hfill
+    \begin{column}{0.32\textwidth}
+      \infocard[plain][16mm]{SysID}{\li 摩擦推定器による摩擦}
+    \end{column}
+  \end{columns}
+
+  \vspace{0.3em}
+  \centering
+  \includegraphics[width=0.86\textwidth,height=32mm,keepaspectratio]{bars_cost.png}
+
+  \takeaway{Ours が，最も低いコストで走れている．}
+\end{frame}
+
+\begin{frame}{結果 ｜ 視覚入力の重要性}
+  \source{Zhang et al., IEEE Transactions on Robotics}
+  \begin{columns}[T,onlytextwidth]
+    \begin{column}{0.32\textwidth}
+      \infocard[orange][14mm]{Depth のみ}{\li 走破性コストが高い}
+    \end{column}
+    \hfill
+    \begin{column}{0.32\textwidth}
+      \infocard[blue][14mm]{RGB のみ}{\li 衝突が多い}
+    \end{column}
+    \hfill
+    \begin{column}{0.32\textwidth}
+      \infocard[green][14mm]{Ours}{\li すべてにおいてよい}
+    \end{column}
+  \end{columns}
+
+  \vspace{0.35em}
+  \centering
+  \includegraphics[width=0.78\textwidth,height=34mm,keepaspectratio]{bars_vision.png}
+
+  \takeaway{Depth だけはコストが高く，RGB だけは衝突が多い．}
+\end{frame}
+
+\begin{frame}{結果 ｜ オンライン・オフライン学習}
+  \source{Zhang et al., IEEE Transactions on Robotics}
+  \vspace{0.1em}
+  \centering
+  {\scriptsize
+  \begin{tabular}{lcc}
+    \toprule
+    & オフライン（過去のお手本） & オンライン（探索データ） \\
+    \midrule
+    \textbf{Ours（RLPD）} & 通常データ 50\% & 通常データ 50\% \\
+    Behavior Cloning & 模倣データ & なし \\
+    Vanilla SAC & なし & 通常データ \\
+    SAC with BCL & 模倣データ & 通常データ \\
+    \bottomrule
+  \end{tabular}
+  }
+
+  \vspace{0.25em}
+  \centering
+  \includegraphics[width=0.78\textwidth,height=36mm,keepaspectratio]{bars_rlpd.png}
+
+  \takeaway{Ours は少ないデータでも効率よく学び，高い性能を持つ．}
+\end{frame}
+
+\begin{frame}{結果 ｜ 実機での検証}
+  \source{Zhang et al., IEEE Transactions on Robotics}
+  \centering
+  \includegraphics[width=\textwidth,height=54mm,keepaspectratio]{real_cost.png}
+
+  \takeaway{歩きやすい路面では，走破性コストが下がる．}
+\end{frame}
+
+\begin{frame}{結果 ｜ 実機でのナビゲーション}
+  \source{Zhang et al., IEEE Transactions on Robotics}
+  \centering
+  \includegraphics[width=\textwidth,height=56mm,keepaspectratio]{nav_real.png}
+
+  \takeaway{歩きにくい地面を避けて，ゴールへ歩いた．}
+\end{frame}
+
+\begin{frame}{まとめ ｜ Traversability-Aware}
+  \source{Zhang et al., IEEE Transactions on Robotics}
+  \infocard[green][18mm]{貢献}{%
+    \li 不確実性を考慮した「事故経験に基づく走破性評価」
+    \li RGB-D を統合した地形回避ナビゲーション
+    \li 実機でのオンオフライン学習}
+  \vspace{0.35em}
+  \infocard[orange][18mm]{課題}{%
+    \li 階段など，高さが大きく変わる環境への適応}
+
+  \takeaway{走破性は報酬に入り，高さの大きい地形はまだ苦手である．}
+\end{frame}
+
+\end{document}

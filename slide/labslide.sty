@@ -59,6 +59,7 @@
   kwblue/.style={kw, draw=cbluett, fill=cblue},
   kworange/.style={kw, draw=corangett, fill=corange},
   kwgreen/.style={kw, draw=cgreentt, fill=cgreen},
+  kwpurple/.style={kw, draw=cviolettt, fill=cviolet},
   kwarr/.style={-{Stealth[length=1.5mm]}, draw=ink, line width=0.5pt}
 }
 
@@ -145,39 +146,43 @@
   }{}%
 }
 
-% [color]{title}{body}
-\newcommand{\agendacard}[3][green]{%
+% [color][min height]{title}{body}
+% The second optional sets minimum height so cards in one comparison stay equal.
+\NewDocumentCommand{\agendacard}{O{green} o m m}{%
   \usecardcolor{#1}%
+  \IfValueTF{#2}{\def\cardminh{#2}}{\def\cardminh{15.5mm}}%
   \begin{tikzpicture}[baseline=(card.north)]
     \node[
       anchor=north west,
       fill=\cardfill,
       text width=42mm,
-      minimum height=15.5mm,
+      minimum height=\cardminh,
       inner xsep=7pt,
       inner ysep=5.5pt,
       align=flush left
     ] (card) {%
-      {\color{\cardtitlec}\bfseries #2}\\[0.28em]
-      {\color{muted}\footnotesize #3}%
+      {\color{\cardtitlec}\bfseries #3}\\[0.28em]
+      {\color{muted}\footnotesize #4}%
     };
   \end{tikzpicture}%
 }
 
-% [color]{title}{body}  for use inside a column
-\newcommand{\infocard}[3][green]{%
+% [color][min height]{title}{body}  for use inside a column
+\NewDocumentCommand{\infocard}{O{green} o m m}{%
   \usecardcolor{#1}%
+  \IfValueTF{#2}{\def\cardminh{#2}}{\def\cardminh{0pt}}%
   \begin{tikzpicture}[baseline=(card.north)]
     \node[
       anchor=north west,
       fill=\cardfill,
       text width=\dimexpr\linewidth-14pt\relax,
+      minimum height=\cardminh,
       inner xsep=6.5pt,
       inner ysep=5.5pt,
       align=flush left
     ] (card) {%
-      {\color{\cardtitlec}\bfseries #2}\\[0.32em]
-      {\color{body}\footnotesize #3}%
+      {\color{\cardtitlec}\bfseries #3}\\[0.32em]
+      {\color{body}\footnotesize #4}%
     };
   \end{tikzpicture}%
 }
@@ -281,3 +286,75 @@
   \end{tikzpicture}%
   \hspace{0.15em}%
 }
+
+% SyncTeX: beamer typesets the frame body from a saved macro, so every
+% glyph is recorded on the \end{frame} line. Re-read each frame as a file
+% whose line numbers match the source. See labslide-synctex.lua.
+\RequirePackage{etoolbox}
+\makeatletter
+\newcount\labslide@sxline
+\directlua{
+  local sty = kpse.find_file("labslide.sty")
+  local dir = sty and sty:match("^(.*)/") or "."
+  dofile(dir .. "/labslide-synctex.lua")
+}
+\ifdefined\beamer@checkforfragile
+  % Put fragile inside the existing [...] so [plain] becomes [plain,fragile].
+  % A second bracket group is read as the frame title, not as an option.
+  \def\beamer@checkforfragile#1fragile#2\relax{%
+    \ifblank{#2}{%
+      \begingroup
+      \edef\labslide@opts{\detokenize\expandafter{\beamer@frameoptions}}%
+      \directlua{labslide_sx.add_fragile()}%
+      \endgroup
+    }{}%
+    \endgroup
+    \expandafter\beamer@framecommand\beamer@frameoptions\bgroup
+  }
+  \def\labslide@sxfile{\jobname.sx.vrb}
+  \patchcmd{\beamer@doexternalframe}
+    {\edef\beamer@verbfilename{\jobname\ifx\beamer@againname\@empty\else.\insertframenumber\fi.vrb}}
+    {\edef\beamer@verbfilename{\labslide@sxfile}\directlua{labslide_sx.on_begin()}}
+    {}{\PackageWarning{labslide}{SyncTeX patch for frame files failed}}
+  \pretocmd{\beamer@@@frameinput}
+    {\directlua{labslide_sx.pad_file()}}
+    {}{\PackageWarning{labslide}{SyncTeX patch for frame input failed}}
+  \let\labslide@usebeamertemplatedosss\beamer@usebeamertemplatedosss
+  \def\beamer@usebeamertemplatedosss#1{%
+    \def\labslide@tmplname{#1}%
+    \def\labslide@frametitlename{frametitle}%
+    \ifx\labslide@tmplname\labslide@frametitlename
+      \begingroup
+      \let\labslide@titletext\insertframetitle
+      \def\insertframetitle{\labslide@synctextitle}%
+      \labslide@usebeamertemplatedosss{#1}%
+      \endgroup
+    \else
+      \labslide@usebeamertemplatedosss{#1}%
+    \fi
+  }
+  \newwrite\labslide@sxout
+  \newcount\labslide@sxi
+  % Replayed from the padded file so the title glyphs keep \begin{frame}'s line.
+  % The title tokens themselves are not written out: @-commands would be
+  % re-tokenized with the wrong catcode.
+  \newcommand{\labslidesyncreplay}{\labslide@titletext}
+  \newcommand{\labslide@synctextitle}{%
+    \ifnum\labslide@sxline=0
+      \labslide@titletext
+    \else
+      \begingroup
+      \immediate\openout\labslide@sxout=\jobname.sxtitle.vrb\relax
+      \labslide@sxi=\numexpr\labslide@sxline-1\relax
+      \loop\ifnum\labslide@sxi>0
+        \immediate\write\labslide@sxout{\@percentchar}%
+        \advance\labslide@sxi by -1
+      \repeat
+      \immediate\write\labslide@sxout{\string\labslidesyncreplay}%
+      \immediate\closeout\labslide@sxout
+      \endgroup
+      \input{\jobname.sxtitle.vrb}%
+    \fi
+  }
+\fi
+\makeatother

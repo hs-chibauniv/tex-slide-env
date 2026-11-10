@@ -1,0 +1,1 @@
+../labslide-synctex.lua
